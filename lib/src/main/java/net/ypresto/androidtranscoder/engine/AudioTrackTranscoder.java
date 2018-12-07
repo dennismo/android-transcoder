@@ -149,7 +149,7 @@ public class AudioTrackTranscoder implements TrackTranscoder {
 
     }
     @Override
-    public void setupDecoders(TimeLine.Segment segment, MediaTranscoderEngine.TranscodeThrottle throttle, int outputRotation) {
+    public void setupDecoders(TimeLine.Segment segment, MediaTranscoderEngine.TranscodeThrottle throttle, int outputRotation, int width, int height) {
 
         LinkedHashMap<String, MediaCodec> decoders = new LinkedHashMap<String, MediaCodec>();
 
@@ -170,6 +170,7 @@ public class AudioTrackTranscoder implements TrackTranscoder {
             }
             if (decoderWrapper.mIsDecoderEOS) {
                 TLog.d(TAG, "setupDecoders channel:" + channelName + " is at EOS -- dropping");
+                throttle.departicipate("Audio" + channelName);
             } else {
                 TLog.d(TAG, "setupDecoders channel: " + channelName);
                 decoderWrapper.mIsSegmentEOS = false;
@@ -309,7 +310,7 @@ public class AudioTrackTranscoder implements TrackTranscoder {
                 // End of stream - requeue the buffer
                 if ((decoderWrapper.mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     decoderWrapper.mIsDecoderEOS = true;
-                    segment.forceEndOfStream(mOutputPresentationTimeDecodedUs);
+                    //segment.forceEndOfStream(mOutputPresentationTimeDecodedUs);
                     if (mIsLastSegment)
                         mAudioChannel.drainDecoderBufferAndQueue(channelName, BUFFER_INDEX_END_OF_STREAM, 0l, 0l, false, 0l, 0l);
                     else

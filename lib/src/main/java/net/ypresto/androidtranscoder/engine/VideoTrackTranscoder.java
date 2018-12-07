@@ -15,6 +15,7 @@
  */
 package net.ypresto.androidtranscoder.engine;
 
+import android.graphics.RectF;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
@@ -56,7 +57,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mExtractor = mediaExtractor;
         }
 
-        public void start(int outputRotation) {
+        public void start(int outputRotation, int outputWidth, int outputHeight) {
             mOutputSurface = new OutputSurface();
             MediaExtractorUtils.TrackResult trackResult = MediaExtractorUtils.getFirstVideoAndAudioTrack(mExtractor);
             if (trackResult.mVideoTrackFormat != null) {
@@ -64,14 +65,24 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                 mTrackIndex = trackIndex;
                 mExtractor.selectTrack(trackIndex);
                 MediaFormat inputFormat = mExtractor.getTrackFormat(trackIndex);
-                if (inputFormat.containsKey(MediaFormatExtraConstants.KEY_ROTATION_DEGREES) &&
-                    inputFormat.getInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES) == outputRotation) {
+                int clipRotation = 0;
+                if (inputFormat.containsKey(MediaFormatExtraConstants.KEY_ROTATION_DEGREES))
+                    clipRotation = inputFormat.getInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES);
                     // Decoded video is rotated automatically in Android 5.0 lollipop.
                     // Turn off here because we don't want to encode rotated one.
                     // refer: https://android.googlesource.com/platform/frameworks/av/+blame/lollipop-release/media/libstagefright/Utils.cpp
-                    inputFormat.setInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES, 0);
-                }
-                mOutputSurface = new OutputSurface();
+                int rotation = clipRotation - outputRotation;
+                if (rotation < 0)
+                    rotation = 360 + rotation;
+                inputFormat.setInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES, rotation);
+                mOutputSurface.setRotation(rotation);
+                int clipWidth = inputFormat.getInteger(MediaFormat.KEY_WIDTH);
+                int clipHeight = inputFormat.getInteger(MediaFormat.KEY_HEIGHT);
+                if (rotation == 90 || rotation == 270)
+                    mOutputSurface.setSourceRect(new RectF(0, 0, clipHeight, clipWidth));
+                else
+                    mOutputSurface.setSourceRect(new RectF(0, 0, clipWidth, clipHeight));
+                mOutputSurface.setDestRect(new RectF(0, 0, outputWidth, outputHeight));
 
                 try {
                     mDecoder = MediaCodec.createDecoderByType(inputFormat.getString(MediaFormat.KEY_MIME));
@@ -196,7 +207,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
      * @param segment
      */
     @Override
-    public void setupDecoders(TimeLine.Segment segment, MediaTranscoderEngine.TranscodeThrottle throttle, int outputRotation) {
+    public void setupDecoders(TimeLine.Segment segment, MediaTranscoderEngine.TranscodeThrottle throttle, int outputRotation, int width, int height) {
 
           // Start any decoders being opened for the first time
 
@@ -212,7 +223,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             decoderWrapper.mIsSegmentEOS = false;
             if (!decoderWrapper.mDecoderStarted) {
                 TLog.d(TAG, "setupDecoders starting decoder for " + channelName);
-                decoderWrapper.start(outputRotation);
+                decoderWrapper.start(outputRotation, width, height);
             }
 
         }
@@ -220,22 +231,19 @@ public class VideoTrackTranscoder implements TrackTranscoder {
         // Create array of texture renderers for each patch in the segment
 
         ArrayList<OutputSurface> outputSurfaces = new ArrayList<OutputSurface>(2);
-        boolean flip = false;
-        for (Map.Entry<String, TimeLine.SegmentChannel> segmentChannelEntry : segment.getSegmentChannels().entrySet()) {
-            String channelName = segmentChannelEntry.getKey();
-            TimeLine.SegmentChannel segmentChannel = segmentChannelEntry.getValue();
+        for (Map.Entry<String, TimeLine.InputChannel> inputChannelEntry : segment.getVideoChannels().entrySet()) {
+            String channelName = inputChannelEntry.getKey();
+            TimeLine.InputChannel inputChannel = inputChannelEntry.getValue();
             DecoderWrapper decoderWrapper = mDecoderWrappers.get(channelName);
-            decoderWrapper.mOutputSurface.setAlpha(segmentChannel.mFilter == TimeLine.Filter.SUPPRESS ? 0f : 1.0f);
+            decoderWrapper.mOutputSurface.setAlpha(1.0f);
             if (!decoderWrapper.mIsDecoderEOS) {
                 outputSurfaces.add(decoderWrapper.mOutputSurface);
-                decoderWrapper.setFilter(segmentChannel.mFilter, mOutputPresentationTimeDecodedUs, segment.getDuration());
+                decoderWrapper.setFilter(inputChannel.mFilter, mOutputPresentationTimeDecodedUs, segment.getDuration());
                 throttle.participate("Video" + channelName);
-                if (segmentChannel.mChannel.mFlip)
-                    flip = true;
             } else
                 decoderWrapper.mIsSegmentEOS = true;
         }
-        mTextureRender = new TextureRender(outputSurfaces, flip);
+        mTextureRender = new TextureRender(outputSurfaces);
         mTextureRender.surfaceCreated();
         TLog.d(TAG, "Surface Texture Created for " + outputSurfaces.size() + " surfaces");
         mTextures = outputSurfaces.size();
@@ -422,7 +430,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                         decoderWrapper.mBufferInfo.size = 0;
                         decoderWrapper.mOutputSurface.signalEndOfInputStream();
                         decoderWrapper.mIsDecoderEOS = true;
-                        segment.forceEndOfStream(mOutputPresentationTimeDecodedUs + 1);
+                        //segment.forceEndOfStream(mOutputPresentationTimeDecodedUs + 1);
                         TLog.d(TAG, "End of Stream channel: " + channelName + " PT:" + mOutputPresentationTimeDecodedUs +
                                 " IT:" + decoderWrapper.mBufferInfo.presentationTimeUs);
                         mTextures = 1; // Write if there is a texture

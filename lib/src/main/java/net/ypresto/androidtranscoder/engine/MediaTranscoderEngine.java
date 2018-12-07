@@ -50,6 +50,8 @@ public class MediaTranscoderEngine {
     private long mDurationUs;
     private long mOutputPresentationTimeUs = 0l;
     int mOutputRotation = 0;
+    int mOutputWidth = 0;
+    int mOutputHeight = 0;
 
     /**
      * The throttle ensures that an encoder doesn't overrun another encoder and produce output
@@ -59,7 +61,7 @@ public class MediaTranscoderEngine {
      */
     private long ThrottleLimit = 250000l;
     private long ThrottleSeed = 24l * 60l * 60l * 1000000l;
-    private long maxBlockTime = 5000l;
+    private long maxBlockTime = 500000l;
     public class TranscodeThrottle {
         private long mPresentationThreshold = ThrottleLimit;
         private Date mBlockedStartTime = null;
@@ -70,7 +72,7 @@ public class MediaTranscoderEngine {
         public void participate (String channel) {
             mLowestPresentationTime.put(channel, null);
         }
-        public void departicpate (String channel) { mLowestPresentationTime.remove(channel);}
+        public void departicipate(String channel) { mLowestPresentationTime.remove(channel);}
         public void startSegment() {
             mLowestPresentationTime = new LinkedHashMap<String, Long>();
         }
@@ -323,7 +325,8 @@ public class MediaTranscoderEngine {
         MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
         mediaMetadataRetriever.setDataSource(mFirstFileDescriptorWithVideo);
         mOutputRotation = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION));
-
+        mOutputHeight = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
+        mOutputWidth = Integer.parseInt(mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
         mVideoTrackTranscoder.setupEncoder();
 
         if (audioOutputFormat == null) {
@@ -356,8 +359,8 @@ public class MediaTranscoderEngine {
             //mAudioTrackTranscoder.setOutputPresentationTimeDecodedUs(presentationTime);
             //mVideoTrackTranscoder.setOutputPresentationTimeDecodedUs(presentationTime);
             mThrottle.startSegment();
-            mAudioTrackTranscoder.setupDecoders(outputSegment, mThrottle, mOutputRotation);
-            mVideoTrackTranscoder.setupDecoders(outputSegment, mThrottle, mOutputRotation);
+            mAudioTrackTranscoder.setupDecoders(outputSegment, mThrottle, mOutputRotation, mOutputWidth, mOutputHeight);
+            mVideoTrackTranscoder.setupDecoders(outputSegment, mThrottle, mOutputRotation, mOutputWidth, mOutputHeight);
             while (!(mVideoTrackTranscoder.isSegmentFinished() && mAudioTrackTranscoder.isSegmentFinished())) {
 
                 boolean videoStepped = mVideoTrackTranscoder.stepPipeline(outputSegment, mThrottle);

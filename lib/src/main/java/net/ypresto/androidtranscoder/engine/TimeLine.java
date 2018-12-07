@@ -209,7 +209,6 @@ public class TimeLine {
         public Long mAudioInputOffsetUs = 0l;
         public Long mVideoInputAcutalEndTimeUs =0l;
         public Long mAudioInputAcutalEndTimeUs =0l;
-        public boolean mFlip = false;
         public long mVideoFrameLength = 1000000 / 24;
         public long mSeekShortage = 0l;
         public long mDurationShortage = 0l;
@@ -310,12 +309,6 @@ public class TimeLine {
                         " AET:" + audioEncodedTime +
                         " drift:" + (videoPresentationTime - audioPresentationTime));
             }
-            if (rampUp != null && rampDown != null && rampUp.mFlip != rampDown.mFlip) {
-                if (rampDown.mFlip)
-                    rampDown.mFlip = false;
-                rampUp.mFilter = null;
-                rampDown.mFilter = Filter.SUPPRESS;
-            }
         }
 
         public void forceEndOfStream(long outputPresentationTime) {
@@ -412,7 +405,7 @@ public class TimeLine {
         public Segment output(String inputChannelName) {
             TLog.i(TAG, "output: " + inputChannelName);
             InputChannel inputChannel = mTimeLineChannels.get(inputChannelName);
-            if (inputChannel.mChannelType != ChannelType.AUDIO)
+            //if (inputChannel.mChannelType != ChannelType.AUDIO)
                 mSegmentChannels.put(inputChannelName, new SegmentChannel(inputChannel, null));
             return this;
         }

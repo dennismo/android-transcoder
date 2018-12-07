@@ -17,6 +17,7 @@
 // blob: fc8ad9cd390c5c311f015d3b7c1359e4d295bc52
 // modified: change TIMEOUT_MS from 500 to 10000
 package net.ypresto.androidtranscoder.engine;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
@@ -56,6 +57,9 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private boolean mEndOfStream;
     private int mTextureID = -12345;
     private float mAlpha = 1.0f;
+    private int mRotation = 0;
+    private RectF mSourceRect;
+    private RectF mDestRect;
     /**
      * Creates an OutputSurface backed by a pbuffer with the specifed dimensions.  The new
      * EGL context and surface will be made current.  Creates a Surface that can be passed
@@ -210,6 +214,12 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     public void setAlpha(float alpha) {
         mAlpha = alpha;
     }
+    public int getRotation () {return mRotation;}
+    public void setRotation(int rotation) {mRotation = rotation;}
+    public RectF getSourceRect () {return mSourceRect;}
+    public void setSourceRect(RectF rect) { mSourceRect = rect;}
+    public RectF getDestRect () {return mDestRect;}
+    public void setDestRect(RectF rect) { mDestRect = rect;}
     /**
      * Latches the next buffer into the texture.  Must be called from the thread that created
      * the OutputSurface object, after the onFrameAvailable callback has signaled that new

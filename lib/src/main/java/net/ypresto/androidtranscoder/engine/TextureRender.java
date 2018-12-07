@@ -18,6 +18,7 @@
 // modified: removed unused method bodies
 // modified: use GL_LINEAR for GL_TEXTURE_MIN_FILTER to improve quality.
 package net.ypresto.androidtranscoder.engine;
+import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
@@ -27,6 +28,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.List;
+
+import static android.opengl.GLES20.GL_COLOR_BUFFER_BIT;
 
 /**
  * Code for rendering a texture onto a surface using OpenGL ES 2.0.
@@ -84,13 +87,12 @@ class TextureRender {
     private int maTextureHandle;
     private int [] muTextures = new int[4];
     private int [] muAlphas = new int[4];
-    private boolean mFlip;
+
     List<OutputSurface> mOutputSurfaces;
     static int mGLESTextures [] = {GLES20.GL_TEXTURE0, GLES20.GL_TEXTURE1, GLES20.GL_TEXTURE2, GLES20.GL_TEXTURE3, GLES20.GL_TEXTURE4};
 
 
-    public TextureRender(List<OutputSurface> outputSurfaces, boolean flip) {
-        mFlip = flip;
+    public TextureRender(List<OutputSurface> outputSurfaces) {
         mOutputSurfaces = outputSurfaces;
         mTriangleVertices = ByteBuffer.allocateDirect(
                 mTriangleVerticesData.length * FLOAT_SIZE_BYTES)
@@ -103,18 +105,26 @@ class TextureRender {
 
         checkGlError("onDrawFrame start");
 
-        mOutputSurfaces.get(0).getSurfaceTexture().getTransformMatrix(mSTMatrix);
-        GLES20.glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
+        OutputSurface outputSurface = mOutputSurfaces.get(0);
+        SurfaceTexture surfaceTexture = outputSurface.getSurfaceTexture();
+        surfaceTexture.getTransformMatrix(mSTMatrix);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
         GLES20.glUseProgram(mProgram);
         checkGlError("glUseProgram");
 
+        int textures =0;
         for (int textureIndex = 0; textureIndex < mOutputSurfaces.size(); ++textureIndex) {
-            GLES20.glUniform1i(muTextures[textureIndex], textureIndex);
-            GLES20.glActiveTexture(mGLESTextures[textureIndex]);
-            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mOutputSurfaces.get(textureIndex).getTextureID());
-            GLES20.glUniform1f(muAlphas[textureIndex], mOutputSurfaces.get(textureIndex).getAlpha());
+            if (mOutputSurfaces.get(textureIndex).getRotation() == outputSurface.getRotation()) {
+                GLES20.glUniform1i(muTextures[textureIndex], textureIndex);
+                GLES20.glActiveTexture(mGLESTextures[textureIndex]);
+                GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mOutputSurfaces.get(textureIndex).getTextureID());
+                GLES20.glUniform1f(muAlphas[textureIndex], mOutputSurfaces.get(textureIndex).getAlpha());
+                ++textures;
+            }
         }
+        if (textures < 2)
+            GLES20.glUniform1f(muAlphas[0], 1.0f);
 
         mTriangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
         GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
@@ -130,8 +140,14 @@ class TextureRender {
         checkGlError("glEnableVertexAttribArray maTextureHandle");
         Matrix.setIdentityM(mMVPMatrix, 0);
 
-        if (mFlip)
-            Matrix.rotateM(mMVPMatrix, 0, 180, 0, 0, 1);
+        //if (mOutputSurfaces.get(0).getFlip())
+        //    Matrix.rotateM(mMVPMatrix, 0, 180, 0, 0, 1);
+
+        float ratioX = outputSurface.getSourceRect().width() / outputSurface.getDestRect().width();
+        float ratioY = outputSurface.getSourceRect().height() / outputSurface.getDestRect().height();
+        float offset = (outputSurface.getDestRect().width() - outputSurface.getSourceRect().width()) / 2;
+        if (ratioX != 1)
+            Matrix.scaleM(mMVPMatrix,  0,ratioX / 2.0f, ratioY / 2.0f, 1);
 
         GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
         GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
@@ -209,6 +225,7 @@ class TextureRender {
     private int loadShader(int shaderType, String source) {
         int shader = GLES20.glCreateShader(shaderType);
         checkGlError("glCreateShader type=" + shaderType);
+        GLES20.glClearColor(0,0,0, 1);
         GLES20.glShaderSource(shader, source);
         GLES20.glCompileShader(shader);
         int[] compiled = new int[1];

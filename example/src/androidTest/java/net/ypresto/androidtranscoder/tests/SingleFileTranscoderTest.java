@@ -37,6 +37,10 @@ public class SingleFileTranscoderTest {
     static private String inputFileName1;
     static private String inputFileName2;
     static private String inputFileName3;
+    static private String inputFileNamer0;
+    static private String inputFileNamer90;
+    static private String inputFileNamer180;
+    static private String inputFileNamer270;
     private static String status = "not started";
     static private int LogLevelForTests = 2;
 
@@ -64,12 +68,52 @@ public class SingleFileTranscoderTest {
     public static void retrieveVideo ()  {
         inputFileName1 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input1.mp4";
         inputFileName2 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input2.mp4";
+        inputFileNamer0 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input3.mp4";
+        inputFileNamer90 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input4.mp4";
+        inputFileNamer180 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input5.mp4";
+        inputFileNamer270 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input6.mp4";
         inputFileName3 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output_SingleFileMono.mp4";
         cleanup(inputFileName1);
         cleanup(inputFileName2);
         try {
             InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.poolcleaner);
             OutputStream out = new FileOutputStream(inputFileName1);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r0);
+            OutputStream out = new FileOutputStream(inputFileNamer0);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r90);
+            OutputStream out = new FileOutputStream(inputFileNamer90);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r180);
+            OutputStream out = new FileOutputStream(inputFileNamer180);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r270);
+            OutputStream out = new FileOutputStream(inputFileNamer270);
             copyFile(in, out);
             in.close();
             out.close();
@@ -108,7 +152,215 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
-
+    @Test()
+    public void OrientationR0() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "OrientationR0");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/OrientationR0.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor inr0 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer180), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", inr0.getFileDescriptor())
+                        .addChannel("B", inr90.getFileDescriptor())
+                        .addChannel("C", inr180.getFileDescriptor())
+                        .addChannel("D", inr270.getFileDescriptor())
+                        .createSegment()
+                            .output("A")
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("A", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                            .output("B", TimeLine.Filter.OPACITY_UP_RAMP)
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("B")
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("B", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                            .output("C", TimeLine.Filter.OPACITY_UP_RAMP)
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("C")
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                            .output("D", TimeLine.Filter.OPACITY_UP_RAMP)
+                            .duration(1000)
+                        .timeLine().createSegment()
+                            .output("D")
+                            .duration(1000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+    @Test()
+    public void OrientationR90() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "OrientationR90");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/OrientationR90.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor inr0 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer180), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", inr90.getFileDescriptor())
+                        .addChannel("B", inr180.getFileDescriptor())
+                        .addChannel("C", inr270.getFileDescriptor())
+                        .addChannel("D", inr0.getFileDescriptor())
+                        .createSegment()
+                        .output("A")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("A", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("B", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("C", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("D", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("D")
+                        .duration(1000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+    @Test()
+    public void OrientationR180() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "OrientationR180");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/OrientationR180.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor inr0 = ParcelFileDescriptor.open(new File(inputFileNamer180), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", inr0.getFileDescriptor())
+                        .addChannel("B", inr90.getFileDescriptor())
+                        .addChannel("C", inr180.getFileDescriptor())
+                        .addChannel("D", inr270.getFileDescriptor())
+                        .createSegment()
+                        .output("A")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("A", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("B", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("C", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("D", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("D")
+                        .duration(1000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+    @Test()
+    public void OrientationR270() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "OrientationR270");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/OrientationR270.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor inr0 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer180), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", inr0.getFileDescriptor())
+                        .addChannel("B", inr90.getFileDescriptor())
+                        .addChannel("C", inr180.getFileDescriptor())
+                        .addChannel("D", inr270.getFileDescriptor())
+                        .createSegment()
+                        .output("A")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("A", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("B", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("C", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("D", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("D")
+                        .duration(1000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+/*
     @Test()
     public void SingleFile() {
         runTest(new Transcode() {
@@ -1026,7 +1278,7 @@ public void ThreeFiles() {
 
 }
 
-
+*/
     public interface Transcode {
         void run () throws IOException, InterruptedException, ExecutionException;
     }

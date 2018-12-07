@@ -142,10 +142,10 @@ class AudioChannel {
         if (mInputSampleRate != mEncodeFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)) {
             throw new UnsupportedOperationException("Audio sample rate conversion not supported yet.");
         }
-
+/*
         if (mInputChannelCount != null && !mInputChannelCount.equals(mActualDecodedFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)))
             throw new UnsupportedOperationException("Mixing mono and stereo not supported yet.");
-
+*/
         mInputChannelCount = mActualDecodedFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
         mOutputChannelCount = mEncodeFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
 
