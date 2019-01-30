@@ -360,7 +360,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-/*
+
     @Test()
     public void SingleFile() {
         runTest(new Transcode() {
@@ -1278,7 +1278,7 @@ public void ThreeFiles() {
 
 }
 
-*/
+
     public interface Transcode {
         void run () throws IOException, InterruptedException, ExecutionException;
     }
