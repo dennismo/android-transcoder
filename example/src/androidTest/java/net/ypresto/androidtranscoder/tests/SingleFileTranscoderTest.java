@@ -268,6 +268,15 @@ public class SingleFileTranscoderTest {
                 ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
+                /*
+                Matrix A: 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+                Matrix B: 1.0 0.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 1.0
+                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                Matrix: 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+                */
                 TimeLine timeline = new TimeLine(LogLevelForTests)
                         .addChannel("A", inr0.getFileDescriptor())
                         .addChannel("B", inr90.getFileDescriptor())

@@ -68,6 +68,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                 int clipRotation = 0;
                 if (inputFormat.containsKey(MediaFormatExtraConstants.KEY_ROTATION_DEGREES))
                     clipRotation = inputFormat.getInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES);
+                mOutputSurface.setSourceRotation(clipRotation);
                     // Decoded video is rotated automatically in Android 5.0 lollipop.
                     // Turn off here because we don't want to encode rotated one.
                     // refer: https://android.googlesource.com/platform/frameworks/av/+blame/lollipop-release/media/libstagefright/Utils.cpp
@@ -82,6 +83,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                     mOutputSurface.setSourceRect(new RectF(0, 0, clipHeight, clipWidth));
                 else
                     mOutputSurface.setSourceRect(new RectF(0, 0, clipWidth, clipHeight));
+                mOutputSurface.setOriginalSourceRect(new RectF(0, 0, clipWidth, clipHeight));
                 mOutputSurface.setDestRect(new RectF(0, 0, outputWidth, outputHeight));
 
                 try {
@@ -306,6 +308,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mEncoder.release();
             mEncoder = null;
         }
+        mTextureRender.surfaceFinished();
     }
 
     /**

@@ -58,6 +58,8 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private int mTextureID = -12345;
     private float mAlpha = 1.0f;
     private int mRotation = 0;
+    private int mSourceRotation = 0;
+    private RectF mOriginalSourceRect;
     private RectF mSourceRect;
     private RectF mDestRect;
     /**
@@ -216,7 +218,10 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     }
     public int getRotation () {return mRotation;}
     public void setRotation(int rotation) {mRotation = rotation;}
-    public RectF getSourceRect () {return mSourceRect;}
+    public int getSourceRotation () {return mSourceRotation;}
+    public void setSourceRotation(int rotation) {mSourceRotation = rotation;}
+    public RectF getOriginalSourceRect () {return mOriginalSourceRect;}
+    public void setOriginalSourceRect(RectF rect) { mOriginalSourceRect = rect;}    public RectF getSourceRect () {return mSourceRect;}
     public void setSourceRect(RectF rect) { mSourceRect = rect;}
     public RectF getDestRect () {return mDestRect;}
     public void setDestRect(RectF rect) { mDestRect = rect;}

@@ -18,11 +18,24 @@
 // modified: removed unused method bodies
 // modified: use GL_LINEAR for GL_TEXTURE_MIN_FILTER to improve quality.
 package net.ypresto.androidtranscoder.engine;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.SurfaceTexture;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.opengl.GLES10;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLUtils;
 import android.opengl.Matrix;
+
+
+import android.R;
 import net.ypresto.androidtranscoder.TLog;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -64,18 +77,25 @@ class TextureRender {
                     "varying vec2 vTextureCoord;\n" +
                     "uniform samplerExternalOES sTexture1;\n" +
                     "uniform samplerExternalOES sTexture2;\n" +
-                    "uniform samplerExternalOES sTexture3;\n" +
+                    "uniform sampler2D sTexture3;\n" +
                     "uniform samplerExternalOES sTexture4;\n" +
                     "uniform float uAlpha1;\n" +
                     "uniform float uAlpha2;\n" +
                     "uniform float uAlpha3;\n" +
                     "uniform float uAlpha4;\n" +
                     "void main() {\n" +
+
                     "  if (uAlpha1 >= 0.00) {\n" +
                     "      gl_FragColor = texture2D(sTexture1, vTextureCoord) * uAlpha1;\n" +
                     "  }\n" +
                     "  if (uAlpha2 >= 0.00) {\n" +
-                    "      gl_FragColor += texture2D(sTexture2, vTextureCoord) * uAlpha2;\n" +
+                    "      gl_FragColor += texture2D(sTexture2, vTextureCoord) * uAlpha1;\n" +
+                    "  }\n" +
+
+                    "  if (uAlpha3 >= 0.00) {\n" +
+                    "      mediump vec4 overlay = texture2D(sTexture3, vTextureCoord) * uAlpha3;\n" +
+                    "      gl_FragColor = (1.0 - overlay.a) * gl_FragColor + overlay;\n" +
+                    "      gl_FragColor = texture2D(sTexture3, vTextureCoord);\n" +
                     "  }\n" +
                     "}\n";
     private float[] mMVPMatrix = new float[16];
@@ -87,6 +107,8 @@ class TextureRender {
     private int maTextureHandle;
     private int [] muTextures = new int[4];
     private int [] muAlphas = new int[4];
+    private Bitmap mBitmap;
+    private Canvas mCanvas;
 
     List<OutputSurface> mOutputSurfaces;
     static int mGLESTextures [] = {GLES20.GL_TEXTURE0, GLES20.GL_TEXTURE1, GLES20.GL_TEXTURE2, GLES20.GL_TEXTURE3, GLES20.GL_TEXTURE4};
@@ -99,6 +121,12 @@ class TextureRender {
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mTriangleVertices.put(mTriangleVerticesData).position(0);
         Matrix.setIdentityM(mSTMatrix, 0);
+        float [] transform = new float[16];
+        outputSurfaces.get(0).getSurfaceTexture().getTransformMatrix(transform);
+        String matrix = "";
+        for (int i = 0; i < 16; ++i)
+            matrix += transform[i] + " ";
+        TLog.d(TAG, "Matrix: " + matrix);
     }
 
     public void drawFrame() {
@@ -140,12 +168,9 @@ class TextureRender {
         checkGlError("glEnableVertexAttribArray maTextureHandle");
         Matrix.setIdentityM(mMVPMatrix, 0);
 
-        //if (mOutputSurfaces.get(0).getFlip())
-        //    Matrix.rotateM(mMVPMatrix, 0, 180, 0, 0, 1);
-
+        // Center properly image if width or height smaller
         float ratioX = outputSurface.getSourceRect().width() / outputSurface.getDestRect().width();
         float ratioY = outputSurface.getSourceRect().height() / outputSurface.getDestRect().height();
-        float offset = (outputSurface.getDestRect().width() - outputSurface.getSourceRect().width()) / 2;
         if (ratioX != 1)
             Matrix.scaleM(mMVPMatrix,  0,ratioX / 2.0f, ratioY / 2.0f, 1);
 
@@ -153,8 +178,10 @@ class TextureRender {
         GLES20.glUniformMatrix4fv(muSTMatrixHandle, 1, false, mSTMatrix, 0);
         //GLES20.glEnable(GLES20.GL_BLEND);
         //GLES20.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        //renderBitmap();
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
         checkGlError("glDrawArrays");
+
         GLES20.glFinish();
 
         for (int textureIndex = 0; textureIndex < mOutputSurfaces.size(); ++textureIndex) {
@@ -162,9 +189,117 @@ class TextureRender {
         }
 
     }
+
+    public void setupBitmapTexture() {
+        int [] textures = new int[1];
+        OutputSurface outputSurface = mOutputSurfaces.get(0);
+        int width = Math.round(outputSurface.getOriginalSourceRect().width());
+        int height = Math.round(outputSurface.getOriginalSourceRect().height());
+        int fontSize = width / 20;
+
+        int bitMapWidth = 0;
+        int bitMapHeight = 0;
+        int pivotX = 0;
+        int pivotY = 0;
+        int rotation = 0;
+        int offsetX = 0;
+        float scale = 1;
+        switch (outputSurface.getSourceRotation()) {
+            case 0:
+                bitMapHeight = height;
+                bitMapWidth = width;
+                pivotX = width / 2;
+                pivotY = height / 2;
+                break;
+            case 90:
+                bitMapHeight = width;
+                bitMapWidth = (width * width) / height;
+                scale = (float) width / (float) height;
+                pivotX = (int) (scale * (float) height / 2);
+                pivotY = (int) (scale * height / 2);
+                rotation = -90;
+                break;
+            case 180:
+                bitMapHeight = height;
+                bitMapWidth = width;
+                pivotX = width / 2;
+                pivotY = height / 2;
+                rotation = 180;
+                break;
+            case 270:
+                bitMapHeight = width;
+                bitMapWidth = height;
+                bitMapHeight = height;
+                bitMapWidth = width;
+                pivotX = width - height / 2;
+                pivotY = height / 2;
+                rotation = -270;
+                offsetX = width - height;
+                break;
+        }
+
+        // Create an empty, mutable bitmap
+        mBitmap = Bitmap.createBitmap(bitMapWidth, bitMapHeight, Bitmap.Config.ARGB_8888);
+        mCanvas = new Canvas(mBitmap);
+
+        mBitmap.eraseColor(android.graphics.Color.WHITE);
+
+        mCanvas.drawColor(Color.argb(255, 255, 255, 255), PorterDuff.Mode.SRC);
+
+         TLog.d(TAG, "Canvas: " + width + " x " + height + " : " + outputSurface.getSourceRotation());
+
+        // Draw the text
+        Paint textPaint = new Paint();
+        textPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+        textPaint.setAlpha(0);
+        textPaint.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
+        textPaint.setStyle(Paint.Style.FILL);
+        textPaint.setStrokeWidth(0);
+        textPaint.setSubpixelText(false);
+        textPaint.clearShadowLayer();
+        textPaint.setTextSize(Math.round(fontSize * scale));
+        textPaint.setAntiAlias(false);
+        textPaint.setARGB(0xff, 0xff, 0x00, 0x00);
+        // draw the text centered
+
+        mCanvas.drawText(width + " x " + height + " : " + outputSurface.getSourceRotation(), 10,10 + fontSize * 2, textPaint);
+
+        mCanvas.save(Canvas.MATRIX_SAVE_FLAG);
+
+        mCanvas.rotate(rotation, pivotX, pivotY);
+        mCanvas.drawText("Hello World ", ((float) (10 + offsetX)) * scale,10 + fontSize * scale, textPaint);
+        mCanvas.restore();
+
+        GLES20.glGenTextures(1, textures, 0);
+        GLES20.glActiveTexture(mGLESTextures[2]);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[0]);
+
+
+
+//Create Nearest Filtered Texture
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+
+//Different possible texture parameters, e.g. GLES20.GL_CLAMP_TO_EDGE
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT);
+
+//Clean up
+
+    }
+    public void renderBitmap() {
+        GLES20.glUniform1i(muTextures[2], 2);
+        GLES20.glUniform1f(muAlphas[2], 1f);
+        GLES20.glActiveTexture(mGLESTextures[2]);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mBitmap, 0);
+    }
     /**
      * Initializes GL state.  Call this after the EGL surface has been created and made current.
      */
+    public void surfaceFinished() {
+        mBitmap.recycle();
+    }
+
     public void surfaceCreated() {
         mProgram = createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
         if (mProgram == 0) {
@@ -190,14 +325,14 @@ class TextureRender {
         if (muSTMatrixHandle == -1) {
             throw new RuntimeException("Could not get attrib location for uSTMatrix");
         }
-        for (int textureIndex = 0; textureIndex < mOutputSurfaces.size(); ++textureIndex) {
+        for (int textureIndex = 0; textureIndex < 3; ++textureIndex) {
             muTextures[textureIndex] = GLES20.glGetUniformLocation(mProgram, "sTexture" + (textureIndex + 1));
             checkGlError("glGetUniformLocation sTexture");
             if (muTextures[textureIndex] == -1) {
                 throw new RuntimeException("Could not get attrib location for sTexture" + (textureIndex + 1));
             }
         }
-        for (int textureIndex = 0; textureIndex < mOutputSurfaces.size(); ++textureIndex) {
+        for (int textureIndex = 0; textureIndex < 3; ++textureIndex) {
             muAlphas[textureIndex] = GLES20.glGetUniformLocation(mProgram, "uAlpha" + (textureIndex + 1));
             checkGlError("glGetUniformLocation uALpha");
             if (muTextures[textureIndex] == -1) {
@@ -219,7 +354,7 @@ class TextureRender {
                     GLES20.GL_CLAMP_TO_EDGE);
             checkGlError("glTexParameter");
         }
-
+        //setupBitmapTexture();
     }
 
     private int loadShader(int shaderType, String source) {
