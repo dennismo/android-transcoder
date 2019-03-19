@@ -15,10 +15,16 @@
  */
 package net.ypresto.androidtranscoder.engine;
 
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.view.Surface;
+
 import net.ypresto.androidtranscoder.TLog;
 
 import net.ypresto.androidtranscoder.format.MediaFormatExtraConstants;
@@ -29,7 +35,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 // Refer: https://android.googlesource.com/platform/cts/+/lollipop-release/tests/tests/media/src/android/media/cts/ExtractDecodeEditEncodeMuxTest.java
@@ -137,7 +142,146 @@ public class VideoTrackTranscoder implements TrackTranscoder {
         }
 
     };
+    /**
+     * Wraps an output surface with logic to write on it's canvas.  It must be passed the media
+     * extractor of the first video track so that it can coordinate it's rotation with the vide
+     * that it will ultimately be blended with in the TextureRenderer
+     */
+    private class CanvasWrapper {
+        private MediaExtractor mExtractor;
+        private OutputSurface mOutputSurface;
+        private boolean mDrawn = false;
+        CanvasWrapper(MediaExtractor mediaExtractor) {
+            mExtractor = mediaExtractor;
+        }
+
+        public void start(int outputRotation, int outputWidth, int outputHeight) {
+
+            MediaExtractorUtils.TrackResult trackResult = MediaExtractorUtils.getFirstVideoAndAudioTrack(mExtractor);
+            if (trackResult.mVideoTrackFormat != null) {
+                int trackIndex = trackResult.mVideoTrackIndex;
+                mExtractor.selectTrack(trackIndex);
+                MediaFormat inputFormat = mExtractor.getTrackFormat(trackIndex);
+
+                // Determine rotation of this particular video base on meta tag
+                int clipRotation = 0;
+                if (inputFormat.containsKey(MediaFormatExtraConstants.KEY_ROTATION_DEGREES))
+                    clipRotation = inputFormat.getInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES);
+
+                // Decoded video is rotated automatically in Android 5.0 lollipop and above (our target)
+                // Turn off here because we don't want to rotate the video but rather preserve the meta tag for rotation
+                int rotation = clipRotation - outputRotation;  // Subsequent videos may have to rotated to align
+                if (rotation < 0)
+                    rotation = 360 + rotation;
+                inputFormat.setInteger(MediaFormatExtraConstants.KEY_ROTATION_DEGREES, rotation);
+
+                // width & height of clip though this may be swapped if the clip has to be rotated
+                int clipWidth = inputFormat.getInteger(MediaFormat.KEY_WIDTH);
+                int clipHeight = inputFormat.getInteger(MediaFormat.KEY_HEIGHT);
+
+                mOutputSurface = new OutputSurface(clipWidth,  clipHeight);
+                mOutputSurface.setRotation(rotation);  // Actual rotation in fragment shader
+                mOutputSurface.setSourceRotation(clipRotation);  // Original rotation
+
+                // Compute rectangle of rotated video
+                if (rotation == 90 || rotation == 270)
+                    mOutputSurface.setSourceRect(new RectF(0, 0, clipHeight, clipWidth));
+                else
+                    mOutputSurface.setSourceRect(new RectF(0, 0, clipWidth, clipHeight));
+
+                // Original pre-rotated rectangle
+                mOutputSurface.setOriginalSourceRect(new RectF(0, 0, clipWidth, clipHeight));
+
+                // Rectangle of output
+                mOutputSurface.setDestRect(new RectF(0, 0, outputWidth, outputHeight));
+
+            }
+        }
+        void draw () {
+            int pivotX = 0;
+            int pivotY = 0;
+            int rotation = 0;
+            int width = Math.round(mOutputSurface.getOriginalSourceRect().width());
+            int height = Math.round(mOutputSurface.getOriginalSourceRect().height());
+            int outputHeight = height;
+            int outputWidth = width;
+
+            int fontSize = outputWidth / 40;
+            int offsetX = 0;
+
+            switch (mOutputSurface.getSourceRotation()) {
+                case 0:
+                    pivotX = width / 2;
+                    pivotY = height / 2;
+                    break;
+                case 90:
+                    pivotX = height / 2;
+                    pivotY = height / 2;
+                    rotation = -90;
+                    outputHeight = width;
+                    outputWidth = height;
+                    break;
+                case 180:
+                    pivotX = width / 2;
+                    pivotY = height / 2;
+                    rotation = 180;
+                    break;
+                case 270:
+                    pivotX = width - height / 2;
+                    pivotY = height / 2;
+                    rotation = -270;
+                    offsetX = width - height;
+                    outputHeight = width;
+                    outputWidth = height;
+                    break;
+            }
+            Surface surface = mOutputSurface.getSurface();
+            Canvas canvas = surface.lockCanvas(null);
+            Paint textPaint = new Paint();
+            //textPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_OVER));
+            textPaint.setStyle(Paint.Style.FILL);
+            textPaint.setTextSize(fontSize);
+            textPaint.setAntiAlias(true);
+            textPaint.setARGB(0xff, 0xff, 0x00, 0x00);
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.rotate(rotation, pivotX, pivotY);
+            String str = "Hello World Hello World Hello World Hello World Hello World Hello World Hello World ";
+            canvas.drawText(str, 10 + offsetX,10 + fontSize, textPaint);
+            canvas.drawText(str, 10 + offsetX,outputHeight / 2, textPaint);
+            canvas.drawText(str, 10 + offsetX,outputHeight - 10, textPaint);
+            canvas.restore();
+            surface.unlockCanvasAndPost(canvas);
+
+        }
+        private float mPresentationTimeus;
+        private float mDurationUs;
+        private TimeLine.Filter mFilter;
+        private void setFilter(TimeLine.Filter filter, long presentationTimeUs, long durationUs) {
+            mFilter = filter;
+            mPresentationTimeus = presentationTimeUs;
+            mDurationUs = durationUs;
+
+        }
+        private void filterTick (float presentationTimeUs) {
+            if (mFilter == TimeLine.Filter.OPACITY_UP_RAMP) {
+                mOutputSurface.setAlpha((presentationTimeUs - mPresentationTimeus) / mDurationUs);
+            }
+            if (mFilter == TimeLine.Filter.OPACITY_DOWN_RAMP) {
+                mOutputSurface.setAlpha(1.0f - (presentationTimeUs - mPresentationTimeus) / mDurationUs);
+            }
+        }
+
+
+        private void release() {
+            if (mOutputSurface != null) {
+                mOutputSurface.release();
+                mOutputSurface = null;
+            }
+        }
+
+    };
     LinkedHashMap<String, DecoderWrapper> mDecoderWrappers = new LinkedHashMap<String, DecoderWrapper>();
+    //CanvasWrapper mCanvasWrapper = null;
 
     private static final String TAG = "VideoTrackTranscoder";
     private static final long BUFFER_LEAD_TIME = 0;//100000; // Amount we will let other decoders get ahead
@@ -210,8 +354,13 @@ public class VideoTrackTranscoder implements TrackTranscoder {
      */
     @Override
     public void setupDecoders(TimeLine.Segment segment, MediaTranscoderEngine.TranscodeThrottle throttle, int outputRotation, int width, int height) {
-
-          // Start any decoders being opened for the first time
+/*
+        if (mCanvasWrapper != null) {
+            mCanvasWrapper.release();
+            mCanvasWrapper = null;
+        }
+*/
+        // Start any decoders being opened for the first time
 
         for (Map.Entry<String, TimeLine.InputChannel> entry : segment.getVideoChannels().entrySet()) {
             TimeLine.InputChannel inputChannel = entry.getValue();
@@ -227,8 +376,14 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                 TLog.d(TAG, "setupDecoders starting decoder for " + channelName);
                 decoderWrapper.start(outputRotation, width, height);
             }
-
+/*
+            if (mCanvasWrapper == null) {
+                mCanvasWrapper = new CanvasWrapper(mExtractors.get(channelName));
+                mCanvasWrapper.start(outputRotation, width, height);
+            }
+*/
         }
+
 
         // Create array of texture renderers for each patch in the segment
 
@@ -245,7 +400,8 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             } else
                 decoderWrapper.mIsSegmentEOS = true;
         }
-        mTextureRender = new TextureRender(outputSurfaces);
+        //mTextureRender = new TextureRender(outputSurfaces, mCanvasWrapper.mOutputSurface);
+        mTextureRender = new TextureRender(outputSurfaces, null);
         mTextureRender.surfaceCreated();
         TLog.d(TAG, "Surface Texture Created for " + outputSurfaces.size() + " surfaces");
         mTextures = outputSurfaces.size();
@@ -253,7 +409,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
         mIsEncoderEOS = false;
         mIsLastSegment = segment.isLastSegment;
         mTexturesReady = 0;
-
+       // mCanvasWrapper.draw();
     }
 
     @Override
@@ -308,7 +464,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mEncoder.release();
             mEncoder = null;
         }
-        mTextureRender.surfaceFinished();
+        //mTextureRender.surfaceFinished();
     }
 
     /**
@@ -455,7 +611,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                          } else if (doRender && bufferInputStartTime >= inputChannel.mVideoInputStartTimeUs) {
                             decoderWrapper.mDecoder.releaseOutputBuffer(result, true);
                             decoderWrapper.mOutputSurface.awaitNewImage();
-                            decoderWrapper.mOutputSurface.setTextureReady();
+                            //decoderWrapper.mOutputSurface.setTextureReady();
                             decoderWrapper.filterTick(mOutputPresentationTimeDecodedUs);
                             ++mTexturesReady;
                             consumed = true;
@@ -475,12 +631,18 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                 }
             }
         }
+
+
         if (allDecodersEndOfStream()) {
             if (mIsLastSegment && !mIsSegmentFinished)
                 mEncoder.signalEndOfInputStream();
             mIsSegmentFinished = true;
         }
-
+/*
+        // Wait for Canvas
+        if (!mCanvasWrapper.mOutputSurface.isTextureReady())
+            mCanvasWrapper.mOutputSurface.updateTexture();
+*/
         // If all textures have been accumulated draw the image and send it to the encoder
         if (mTexturesReady >= mTextures && mTextures > 0) {
             mTextureRender.drawFrame();

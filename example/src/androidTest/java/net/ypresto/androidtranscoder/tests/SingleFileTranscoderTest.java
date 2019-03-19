@@ -152,6 +152,52 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
+/*
+    @Test()
+    public void SpeedUpScale() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "CrossfadeStitch");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output_CrossfadeStitch.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", in1.getFileDescriptor())
+                        .addChannel("B", in1.getFileDescriptor())
+                        .addChannel("C", in1.getFileDescriptor())
+                        .addAudioOnlyChannel("D", in2.getFileDescriptor())
+                        .createSegment()
+                        .output("C")
+                        .output("D")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("A", TimeLine.Filter.OPACITY_UP_RAMP).timeScale(2000)
+                        .output("D")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .duration(500)
+                        .output("A").timeScale(1500)
+                        .output("D").timeScale(1500)
+                        .timeLine().createSegment()
+                        .seek("B", 1000)
+                        .output("B")
+                        .duration(1500)
+                        .output("D")
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+*/
     @Test()
     public void OrientationR0() {
         runTest(new Transcode() {
@@ -204,6 +250,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
+
     @Test()
     public void OrientationR90() {
         runTest(new Transcode() {
@@ -256,6 +303,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
+
     @Test()
     public void OrientationR180() {
         runTest(new Transcode() {
@@ -268,15 +316,7 @@ public class SingleFileTranscoderTest {
                 ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
-                /*
-                Matrix A: 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
-                Matrix B: 1.0 0.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 1.0
-                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
-                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
-                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
-                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
-                Matrix: 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
-                */
+
                 TimeLine timeline = new TimeLine(LogLevelForTests)
                         .addChannel("A", inr0.getFileDescriptor())
                         .addChannel("B", inr90.getFileDescriptor())
@@ -317,6 +357,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
+
     @Test()
     public void OrientationR270() {
         runTest(new Transcode() {

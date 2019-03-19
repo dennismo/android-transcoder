@@ -71,22 +71,22 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException();
         }
-        eglSetup(width, height);
-        makeCurrent();
-        setup();
+        //eglSetup(width, height);
+        //makeCurrent();
+        setup(width, height);
     }
     /**
      * Creates an OutputSurface using the current EGL context (rather than establishing a
      * new one).  Creates a Surface that can be passed to MediaCodec.configure().
      */
     public OutputSurface() {
-        setup();
+        setup(0, 0);
     }
     /**
      * Creates instances of TextureRender and SurfaceTexture, and a Surface associated
      * with the SurfaceTexture.
      */
-    private void setup() {
+    private void setup(int width, int height) {
 
         // Generate a texture ID
         int[] textures = new int[1];
@@ -111,6 +111,8 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         // Java language note: passing "this" out of a constructor is generally unwise,
         // but we should be able to get away with it here.
         mSurfaceTexture.setOnFrameAvailableListener(this);
+        if (width > 0)
+            mSurfaceTexture.setDefaultBufferSize(width, height);
         mSurface = new Surface(mSurfaceTexture);
     }
     public int getTextureID () {
@@ -250,11 +252,15 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
             mFrameAvailable = false;
         }
         // Latch the data.
+
+        updateTexture();
+
+    }
+    public void updateTexture () {
         this.checkGlError("before updateTexImage");
         mSurfaceTexture.updateTexImage();
         mTextureReady = true;
     }
-
     @Override
     public void onFrameAvailable(SurfaceTexture st) {
         if (VERBOSE) TLog.d(TAG, "new frame available");

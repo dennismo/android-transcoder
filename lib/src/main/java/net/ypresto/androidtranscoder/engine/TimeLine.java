@@ -12,33 +12,31 @@ import java.util.Map;
 /**
  * Represents the wiring for a time sequence in terms of input channels, output channels and filters
  *
- * TimeLine timeLine = (new TimeLine())
- *      .addChannel("movie1", fd1)
- *      .addChannel("movie2", fd2)
- *      .addChannel("movie3", fd2)
- *      .addChannel("soundtrack", fd3)
- *      .createSegment()
- *          .duration(60000)
- *          .audio("soundtrack")
- *          .output("movie1", Filter.SEPIA)
- *      .timeLine().createSegment()
- *          .duration(2000)
- *          .seek("movie2", 1000)
- *          .combineAndPipe("movie1", "movie2", Filter.CROSSFADE, "temp")
- *          .audio("soundtrack")
- *          .output("temp", Filter.SEPIA)
- *      .timeLine().createSegment()
-*           .duration("4000")
- *          .audio("soundtrack")
- *          .output("movie2")
- *      .timeLine().createSegment(1000)
- *          .audio("soundtrack")
- *          .combineAndOutput("movie2", "movie3", Filter.CROSSFADE)
- *      .timeLine().createSegment()
- *          .audio("soundtrack")
- *          .output("movie3")
- *      .timeLine().start()
- */
+ TimeLine timeline = new TimeLine(LogLevelForTests)
+     .addChannel("A", in1.getFileDescriptor())
+     .addChannel("B", in1.getFileDescriptor())
+     .addChannel("C", in1.getFileDescriptor())
+     .addAudioOnlyChannel("D", in2.getFileDescriptor())
+ .createSegment()
+     .output("C")
+     .output("D")
+     .duration(1000)
+ .timeLine().createSegment()
+     .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+     .output("A", TimeLine.Filter.OPACITY_UP_RAMP)
+     .output("D")
+     .duration(2000)
+ .timeLine().createSegment()
+     .duration(1500)
+     .output("A")
+     .output("D")
+     .text("Hello World").top(50).left(10).size(5).width(90).color(255,255,255,255)
+ .timeLine().createSegment()
+     .seek("B", 1000)
+     .output("B")
+     .duration(1500)
+     .output("D")
+ .timeLine();
 
 
 /**
@@ -171,6 +169,7 @@ public class TimeLine {
     public class SegmentChannel {
         public InputChannel mChannel;
         public Filter mFilter;
+        public Long mTimeScale;
         public Long mSeek;
         boolean mAudioSeekRequested = false;
         boolean mVideoSeekRequested = false;
@@ -228,6 +227,7 @@ public class TimeLine {
     public class Segment {
         private TimeLine mTimeLine;
         private LinkedHashMap<String, SegmentChannel> mSegmentChannels = new LinkedHashMap();
+        private SegmentChannel mLastSegmentChannel = null;
         private HashMap<String, Long> mSeeks = new HashMap<String, Long>();
         private Long mDuration;
         public Long mOutputStartTimeUs;
@@ -244,26 +244,15 @@ public class TimeLine {
         public SegmentChannel getSegmentChannel(String channel) {
             return mSegmentChannels.get(channel);
         }
-        public void start (Long presentationTime, Segment previousSegment, Long videoPresentationTime, Long audioPresentationTime, Long videoEncodedTime, Long audioEncodedTime) {
+        public void start (Long presentationTime, Long videoPresentationTime, Long audioPresentationTime, Long videoEncodedTime, Long audioEncodedTime) {
 
             mOutputStartTimeUs = presentationTime;
-            InputChannel rampUp = null;
-            InputChannel rampDown = null;
-
 
             for (HashMap.Entry<String, SegmentChannel> segmentChannelEntry : mSegmentChannels.entrySet()) {
 
                 SegmentChannel segmentChannel = segmentChannelEntry.getValue();
                 String channelName = segmentChannelEntry.getKey();
                 InputChannel inputChannel = segmentChannel.mChannel;
-
-                // If rotation different don't crossfade
-                if (inputChannel.mFilter == Filter.OPACITY_DOWN_RAMP)
-                    rampDown = inputChannel;
-                if (inputChannel.mFilter == Filter.OPACITY_UP_RAMP)
-                    rampUp = inputChannel;
-
-                boolean channelInPreviousSegment = previousSegment != null && previousSegment.mSegmentChannels.get(channelName)  != null;
 
                 Long actualSeek = mSeeks.get(channelName) != null ?  mSeeks.get(channelName) : 0l;
                 Long seek = (actualSeek / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
@@ -285,15 +274,12 @@ public class TimeLine {
                 inputChannel.mVideoInputOffsetUs = videoPresentationTime - (seek + inputChannel.mVideoInputAcutalEndTimeUs);
                 inputChannel.mAudioInputOffsetUs = audioPresentationTime - (seek + inputChannel.mAudioInputAcutalEndTimeUs);
 
-                //inputChannel.mAudioInputOffsetUs = inputChannel.mVideoInputOffsetUs = presentationTime - (seek + inputChannel.mInputEndTimeUs);
-
                 inputChannel.mInputEndTimeUs = inputChannel.mInputEndTimeUs + seek + duration;
                 inputChannel.mAudioInputAcutalEndTimeUs = inputChannel.mInputEndTimeUs;
                 inputChannel.mVideoInputAcutalEndTimeUs = inputChannel.mInputEndTimeUs;
 
                 segmentChannel.mSeek = (seek > 0) ? inputChannel.mVideoInputStartTimeUs : null;
                 inputChannel.mFilter = segmentChannel.mFilter;
-
 
                 TLog.d(TAG, "Segment Channel " + channelName + " PT: " + presentationTime +
                         " VStart: " + inputChannel.mVideoInputStartTimeUs +
@@ -308,13 +294,6 @@ public class TimeLine {
                         " VET:" + videoEncodedTime +
                         " AET:" + audioEncodedTime +
                         " drift:" + (videoPresentationTime - audioPresentationTime));
-            }
-        }
-
-        public void forceEndOfStream(long outputPresentationTime) {
-            for (HashMap.Entry<String, SegmentChannel> segmentChannelEntry : mSegmentChannels.entrySet()) {
-                InputChannel inputChannel = segmentChannelEntry.getValue().mChannel;
-                inputChannel.mInputEndTimeUs = outputPresentationTime - inputChannel.mVideoInputOffsetUs;
             }
         }
 
@@ -406,7 +385,8 @@ public class TimeLine {
             TLog.i(TAG, "output: " + inputChannelName);
             InputChannel inputChannel = mTimeLineChannels.get(inputChannelName);
             //if (inputChannel.mChannelType != ChannelType.AUDIO)
-                mSegmentChannels.put(inputChannelName, new SegmentChannel(inputChannel, null));
+            mLastSegmentChannel = new SegmentChannel(inputChannel, null);
+            mSegmentChannels.put(inputChannelName, mLastSegmentChannel);
             return this;
         }
 
@@ -414,12 +394,34 @@ public class TimeLine {
          * Add a single channel input that is filtered before being sent to the encoder
          *
          * @param inputChannelName
-         * @param filter
+         * @param filter to be applied of type Filter
          */
         public Segment output(String inputChannelName, Filter filter) {
             TLog.i(TAG, "output: " + inputChannelName + " with " + filter);
             InputChannel inputChannel = mTimeLineChannels.get(inputChannelName);
-            mSegmentChannels.put(inputChannelName, new SegmentChannel(inputChannel, filter));
+            mLastSegmentChannel = new SegmentChannel(inputChannel, filter);
+            mSegmentChannels.put(inputChannelName, mLastSegmentChannel );
+            return this;
+        }
+
+        /**
+         * Add a filter to the previous segment channel
+         * @param filter to be applied of type Filter
+         * @return Segment
+         */
+        public Segment filter(Filter filter) {
+            mLastSegmentChannel.mFilter = filter;
+            return this;
+        }
+
+        /**
+         * Scale the input so it matches the time of the segment
+         * Only larger values than the segement are currently supported (for speedups)
+         * @param timeScale
+         * @return
+         */
+        public Segment timeScale(long timeScale) {
+            mLastSegmentChannel.mTimeScale = timeScale;
             return this;
         }
 
