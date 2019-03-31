@@ -152,14 +152,14 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
-/*
+
     @Test()
-    public void SpeedUpScale() {
+    public void TimeScale() {
         runTest(new Transcode() {
             @Override
             public void run() throws IOException, InterruptedException, ExecutionException {
-                TLog.d(TAG, "@Test " + "CrossfadeStitch");
-                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output_CrossfadeStitch.mp4";
+                TLog.d(TAG, "@Test " + "TimeScale");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/TimeScale.mp4";
                 cleanup(outputFileName);
                 ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
@@ -169,23 +169,22 @@ public class SingleFileTranscoderTest {
                         .addChannel("C", in1.getFileDescriptor())
                         .addAudioOnlyChannel("D", in2.getFileDescriptor())
                         .createSegment()
-                        .output("C")
-                        .output("D")
-                        .duration(1000)
+                            .output("A").timeScale(2000)
+                            .output("D")
+                            .duration(4000)
                         .timeLine().createSegment()
-                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
-                        .output("A", TimeLine.Filter.OPACITY_UP_RAMP).timeScale(2000)
-                        .output("D")
-                        .duration(1000)
+                            .output("A").timeScale(500)
+                            .output("B", TimeLine.Filter.OPACITY_UP_RAMP).timeScale(2000)
+                            .output("D")
+                            .duration(1000)
                         .timeLine().createSegment()
-                        .duration(500)
-                        .output("A").timeScale(1500)
-                        .output("D").timeScale(1500)
+                            .output("B").timeScale(2000)
+                            .duration(500)
                         .timeLine().createSegment()
-                        .seek("B", 1000)
-                        .output("B")
-                        .duration(1500)
-                        .output("D")
+                            .seek("A", 1000)
+                            .output("A").timeScale(500)
+                            .duration(2000)
+                            .output("D")
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
@@ -197,7 +196,33 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-*/
+    @Test()
+    public void NoAudioSegments() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "NoAudioSegments");
+                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/NoAudioSegments.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", in1.getFileDescriptor())
+                        .createSegment()
+                        .output("A").timeScale(4000)
+                        .duration(8000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+
     @Test()
     public void OrientationR0() {
         runTest(new Transcode() {
@@ -1263,22 +1288,22 @@ public class SingleFileTranscoderTest {
                         .addChannel("A1", in1.getFileDescriptor())
                         .addChannel("A2", in1.getFileDescriptor())
                         .createSegment()
-                        .output("A0")
-                        .duration(3250)
+                            .output("A0")
+                            .duration(3250)
                         .timeLine().createSegment()
-                        .output("A0", TimeLine.Filter.OPACITY_DOWN_RAMP)
-                        .output("A1", TimeLine.Filter.OPACITY_UP_RAMP)
-                        .duration(1750)
+                            .output("A0", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                            .output("A1", TimeLine.Filter.OPACITY_UP_RAMP)
+                            .duration(1750)
                         .timeLine().createSegment()
-                        .output("A1")
-                        .duration(3250)
+                            .output("A1")
+                            .duration(3250)
                         .timeLine().createSegment()
-                        .output("A1", TimeLine.Filter.OPACITY_DOWN_RAMP)
-                        .output("A2", TimeLine.Filter.OPACITY_UP_RAMP)
-                        .duration(1750)
+                            .output("A1", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                            .output("A2", TimeLine.Filter.OPACITY_UP_RAMP)
+                            .duration(1750)
                         .timeLine().createSegment()
-                        .output("A2")
-                        .duration(3250)
+                            .output("A2")
+                            .duration(3250)
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,

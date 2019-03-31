@@ -1,20 +1,21 @@
 android-transcoder
 =================
 
-Hardware accelerated transcoder for Android, written in pure Java rathwr than using FFmpeg.
- Forked from the net.ypresto.androidtranscode,
- this library provides additional editing capabilities including:
+Hardware accelerated transcoder for Android that uses MediaCodec rather than FFMPeg.  With it you can
 
- * Combining multiple files
- * Including only individual segments from files
- * Cross fades between individusl segments and files
+ * Combine multiple files with cross-fades
+ * Splice out portions of the file at the beginning middle or end
+ * Change video formats (transcode) in the process
+ * Do time scaling both speeding up and slowing down portions
 
 
 ## Usage
 
 ```java
     MediaTranscoder.getInstance().transcodeVideo(fileDescriptor, file.getAbsolutePath(),
-            MediaFormatStrategyPresets.createAndroid720pStrategy(), listener); // or createAndroid720pStrategy([your bitrate here])
+            MediaFormatStrategyPresets.createAndroid720pStrategy(), listener); 
+
+// or createAndroid720pStrategy([your bitrate here])
             ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
             TimeLine timeline = new TimeLine(LogLevelForTests)
                 .addChannel("A", in1.getFileDescriptor())
@@ -51,8 +52,6 @@ Hardware accelerated transcoder for Android, written in pure Java rathwr than us
 
 More documentation will be forthcoming.  For now refer to SingleFileTransactionTest.java
 
-See `TranscoderActivity.java` in example directory for ready-made transcoder app.
-
 ## Quick Setup
 
 ### Gradle
@@ -71,14 +70,16 @@ dependencies {
 }
 ```
 
+
+
+
 ## Note (PLEASE READ FIRST)
 
-- This library raises `RuntimeException`s (like `IlleagalStateException`) in various situations. Please catch it and provide alternate logics. I know this is bad design according to Effective Java; just is TODO.
-- Currently this library does not generate streaming-aware mp4 file.
-Use [qtfaststart-java](https://github.com/ypresto/qtfaststart-java) to place moov atom at beginning of file.
-- Android does not gurantee that all devices have bug-free codecs/accelerators for your codec parameters (especially, resolution). Refer [supported media formats](http://developer.android.com/guide/appendix/media-formats.html) for parameters guaranteed by [CTS](https://source.android.com/compatibility/cts-intro.html).
-- This library may not support video files recorded by other device like digital cameras, iOS (mov files, including non-baseline profile h.264), etc.
-
+This library is still rough around the edges so please be aware that
+ * It may not process all formats of video
+ * It has limited output formats at present
+ * Incorrect parameters (especially time values) can raise exceptions
+ 
 ## License
 
 ```

@@ -62,6 +62,8 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     private RectF mOriginalSourceRect;
     private RectF mSourceRect;
     private RectF mDestRect;
+    private long mExtraTextureRenders = 0l;
+    private boolean mIsDuplicateTexture = false;
     /**
      * Creates an OutputSurface backed by a pbuffer with the specifed dimensions.  The new
      * EGL context and surface will be made current.  Creates a Surface that can be passed
@@ -211,7 +213,25 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
     public boolean isTextureReady() {
         return mTextureReady;
     }
-    public void setTextureReady() { mTextureReady = true;}
+    public boolean isDuplicateTexture() { return mIsDuplicateTexture;}
+    public void duplicateTextures(long extraTextureRenders) {
+        mExtraTextureRenders = extraTextureRenders;
+    }
+
+    public boolean isExtraTextures () {
+        return mExtraTextureRenders > 0;
+    }
+    public boolean consumeDuplicateTexture () {
+        if (mExtraTextureRenders > 0) {
+            --mExtraTextureRenders;
+            return true;
+        } else
+            return false;
+    }
+    public void setDuplicateTextureReady() {
+        mTextureReady = true;
+        mIsDuplicateTexture = true;
+    }
     public void clearTextureReady() { mTextureReady = false;}
 
     public float getAlpha () {return  mAlpha;}
@@ -260,14 +280,15 @@ class OutputSurface implements SurfaceTexture.OnFrameAvailableListener {
         this.checkGlError("before updateTexImage");
         mSurfaceTexture.updateTexImage();
         mTextureReady = true;
+        mIsDuplicateTexture = false;
     }
     @Override
     public void onFrameAvailable(SurfaceTexture st) {
         if (VERBOSE) TLog.d(TAG, "new frame available");
         synchronized (mFrameSyncObject) {
-            if (mFrameAvailable) {
-                throw new RuntimeException("mFrameAvailable already set, frame could be dropped");
-            }
+            //if (mFrameAvailable) {
+            //    throw new RuntimeException("mFrameAvailable already set, frame could be dropped");
+            //}
             mFrameAvailable = true;
             mFrameSyncObject.notifyAll();
         }

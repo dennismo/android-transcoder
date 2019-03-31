@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 public class AudioRemixer {
 
-    int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position, boolean mute) {return 0;};
+    int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position) {return 0;};
 
     static final int SIGNED_SHORT_LIMIT = 32768;
     static final int UNSIGNED_SHORT_MAX = 65535;
@@ -35,7 +35,7 @@ public class AudioRemixer {
     static AudioRemixer DOWNMIX = new AudioRemixer() {
 
         @Override
-        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position, boolean mute) {
+        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position) {
             // Down-mix stereo to mono
             final int inRemaining = inSBuff.remaining() / 2;
             final int outSpace = outSBuff.remaining();
@@ -50,10 +50,6 @@ public class AudioRemixer {
                     // Convert to unsigned
                     int aLeft = inSBuff.get();
                     int aRight = inSBuff.get();
-                    if (mute) {
-                        aLeft = 0;
-                        aRight = 0;
-                    }
                     final int ab = outSBuffCopy.get();
                     outSBuff.put(mix(mix(aLeft, aRight), ab));
                 }
@@ -62,10 +58,6 @@ public class AudioRemixer {
                     // Convert to unsigned
                     int a = inSBuff.get();
                     int b = inSBuff.get();
-                    if(mute) {
-                        a = 0;
-                        b = 0;
-                    }
                     outBuffStartingPosition = outSBuff.position();
                     outSBuff.put(mix(a, b));
                 }
@@ -76,7 +68,7 @@ public class AudioRemixer {
 
     static AudioRemixer UPMIX = new AudioRemixer() {
         @Override
-        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position, boolean mute) {
+        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position) {
             // Up-mix mono to stereo
             final int inRemaining = inSBuff.remaining();
             final int outSpace = outSBuff.remaining() / 2;
@@ -90,20 +82,13 @@ public class AudioRemixer {
                     // Convert to unsigned
                     int a = inSBuff.get();
                     int b = outSBuffCopy.get();
-                    if (mute) {
-                        a = 0;
-                        b = 0;
-                    }
-                    short m = mix(a, b);
+                      short m = mix(a, b);
                     outSBuff.put(m);
                     outSBuff.put(m);
                 }
             } else {
                 for (int i = 0; i < samplesToBeProcessed; ++i) {
                     short inSample = inSBuff.get();
-                    if (mute) {
-                        inSample = 0;
-                    }
                     outBuffStartingPosition = outSBuff.position();
                     outSBuff.put(inSample);
                     outSBuff.put(inSample);
@@ -113,9 +98,9 @@ public class AudioRemixer {
         }
     };
 
-    static AudioRemixer PASSTHROUGH = new AudioRemixer() {
+    static AudioRemixer PASSTHROUGH =new AudioRemixer() {
         @Override
-        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position, boolean mute) {
+        public int remix(final ShortBuffer inSBuff, final ShortBuffer outSBuff, boolean append, int position) {
 
             int outBuffStartingPosition = 0;
             if (append) {
@@ -131,12 +116,6 @@ public class AudioRemixer {
                     int aRight = inSBuff.get();
                     int bLeft = outSBuffCopy.get();
                     int bRight = outSBuffCopy.get();
-                    if (mute) {
-                        aLeft = 0;
-                        aRight = 0;
-                        bLeft = 0;
-                        bRight = 0;
-                    }
                     outSBuff.put(mix(aLeft, bLeft));
                     outSBuff.put(mix(aRight, bRight));
                 }
@@ -145,13 +124,7 @@ public class AudioRemixer {
 
                 // Passthrough
                 outBuffStartingPosition = outSBuff.position();
-                if (mute) {
-                    short [] zero = new short [inSBuff.remaining()];
-                    Arrays.fill(zero, (short)0);
-                    outSBuff.put(zero);
-                } else {
-                    outSBuff.put(inSBuff);
-                }
+                outSBuff.put(inSBuff);
             }
             return outBuffStartingPosition;
         }

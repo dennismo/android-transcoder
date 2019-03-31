@@ -40,8 +40,12 @@ public class QueuedMuxer {
     private ByteBuffer mByteBuffer;
     private final List<SampleInfo> mSampleInfoList;
     private boolean mStarted;
+    private boolean mHasVideo;
+    private boolean mHasAudio;
 
-    public QueuedMuxer(MediaMuxer muxer, Listener listener) {
+    public QueuedMuxer(MediaMuxer muxer, boolean hasVideo, boolean hasAudio, Listener listener) {
+        mHasAudio = hasAudio;
+        mHasVideo = hasVideo;
         mMuxer = muxer;
         mListener = listener;
         mSampleInfoList = new ArrayList<>();
@@ -62,13 +66,18 @@ public class QueuedMuxer {
     }
 
     private void onSetOutputFormat() {
-        if (mVideoFormat == null || mAudioFormat == null) return;
+        if ((mHasVideo && mVideoFormat == null) || (mHasAudio && mAudioFormat == null))
+            return;
         mListener.onDetermineOutputFormat();
 
-        mVideoTrackIndex = mMuxer.addTrack(mVideoFormat);
-        TLog.v(TAG, "Added track #" + mVideoTrackIndex + " with " + mVideoFormat.getString(MediaFormat.KEY_MIME) + " to muxer");
-        mAudioTrackIndex = mMuxer.addTrack(mAudioFormat);
-        TLog.v(TAG, "Added track #" + mAudioTrackIndex + " with " + mAudioFormat.getString(MediaFormat.KEY_MIME) + " to muxer");
+        if (mHasVideo) {
+            mVideoTrackIndex = mMuxer.addTrack(mVideoFormat);
+            TLog.v(TAG, "Added track #" + mVideoTrackIndex + " with " + mVideoFormat.getString(MediaFormat.KEY_MIME) + " to muxer");
+        }
+        if (mHasAudio) {
+            mAudioTrackIndex = mMuxer.addTrack(mAudioFormat);
+            TLog.v(TAG, "Added track #" + mAudioTrackIndex + " with " + mAudioFormat.getString(MediaFormat.KEY_MIME) + " to muxer");
+        }
         mMuxer.start();
         mStarted = true;
 

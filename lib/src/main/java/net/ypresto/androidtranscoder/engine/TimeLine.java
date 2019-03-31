@@ -59,6 +59,26 @@ public class TimeLine {
         TLog.setTags(tags);
     }
 
+    // Make sure we don't have audio video tracks that have no audio so that the setup of
+    // the encoders can omit the audio since the muxer will otherwise complain if it receives no audio
+    public void prepare() {
+        HashMap<String, Boolean> trackHasAudio = new HashMap<String, Boolean>();
+
+        for (Segment segment : mSegments) {
+            for (HashMap.Entry<String, SegmentChannel> segmentChannelEntry : segment.mSegmentChannels.entrySet()) {
+
+                SegmentChannel segmentChannel = segmentChannelEntry.getValue();
+                if (segmentChannel.mTimeScale == null && segmentChannel.mFilter != Filter.MUTE)
+                    trackHasAudio.put(segmentChannelEntry.getKey(), true);
+            }
+        }
+        for (HashMap.Entry<String, InputChannel> channelEntry : mTimeLineChannels.entrySet()) {
+            if (trackHasAudio.get(channelEntry.getKey()) == null && channelEntry.getValue().mChannelType == ChannelType.AUDIO_VIDEO)
+                channelEntry.getValue().mChannelType = ChannelType.VIDEO;
+        }
+
+    }
+
     public Segment createSegment() {
         TLog.i(TAG, "createSegment: ");
         for (Segment segment : mSegments)
@@ -214,7 +234,11 @@ public class TimeLine {
         public Filter mFilter;
         public ChannelType mChannelType;
         public FileDescriptor mInputFileDescriptor = null;
-
+        public long mTimeToCut = 0l;
+        public long mTimeAlreadyCut = 0l;
+        public long mTimeToAdd = 0l;
+        public long mTimeAlreadyAdded = 0l;
+        public boolean mMuteAudio = false;
         InputChannel() {
         }
 
@@ -254,41 +278,81 @@ public class TimeLine {
                 String channelName = segmentChannelEntry.getKey();
                 InputChannel inputChannel = segmentChannel.mChannel;
 
+                // Round seeks up to a frame
                 Long actualSeek = mSeeks.get(channelName) != null ?  mSeeks.get(channelName) : 0l;
                 Long seek = (actualSeek / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
+
+                // Calculate how much this rounding will effect the segment and add this to an ongoing error accumulator
+                // If the error gets to be the size of a frame then add it to the seek and remove it from the error accumulator
                 inputChannel.mSeekShortage += (actualSeek - seek);
                 Long seekAddition =  (inputChannel.mSeekShortage / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
                 inputChannel.mSeekShortage -= seekAddition;
                 seek += seekAddition;
 
-                Long actualDuration = getDuration();
-                Long duration = (actualDuration / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
-                inputChannel.mDurationShortage += (actualDuration - duration);
+                // Get the requested track duration which is either the segment duration or in the case of time
+                // time scaling up it is the duration of the track
+                Long segmentDuration = getDuration();
+                Long actualTrackDuration = segmentChannel.mTimeScale  != null ? segmentChannel.mTimeScale : segmentDuration;
+
+                // As with seeks we round up to a frame, accumulate the error and add it back if it gets to be as big as a frame
+                Long trackDuration = (actualTrackDuration / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
+                inputChannel.mDurationShortage += (actualTrackDuration - trackDuration);
                 Long durationAddition =  (inputChannel.mDurationShortage / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
                 inputChannel.mDurationShortage -= durationAddition;
-                duration += durationAddition;
+                trackDuration += durationAddition;
 
+                // The starting point in the track is where we left off plus the amount of the seek
                 inputChannel.mVideoInputStartTimeUs = seek + inputChannel.mInputEndTimeUs;
                 inputChannel.mAudioInputStartTimeUs = seek + inputChannel.mInputEndTimeUs;
 
+                // The amount we must add to the input time stamp to get the output time stamp is where we left off with
+                // the output time stamp minus where we left off with the input time stamp plus the amount we are seeking
                 inputChannel.mVideoInputOffsetUs = videoPresentationTime - (seek + inputChannel.mVideoInputAcutalEndTimeUs);
                 inputChannel.mAudioInputOffsetUs = audioPresentationTime - (seek + inputChannel.mAudioInputAcutalEndTimeUs);
 
-                inputChannel.mInputEndTimeUs = inputChannel.mInputEndTimeUs + seek + duration;
+                // Calculate the time to be used to know when we end the segment and seed the actual
+                // end times which will be updated during transcoding
+                inputChannel.mInputEndTimeUs = inputChannel.mInputEndTimeUs + seek + trackDuration;
                 inputChannel.mAudioInputAcutalEndTimeUs = inputChannel.mInputEndTimeUs;
                 inputChannel.mVideoInputAcutalEndTimeUs = inputChannel.mInputEndTimeUs;
 
+                // Keep the time we seek in the segment channel so if we revisit this track
+                // in subsequent segements we know where we left off
                 segmentChannel.mSeek = (seek > 0) ? inputChannel.mVideoInputStartTimeUs : null;
+
                 inputChannel.mFilter = segmentChannel.mFilter;
+                inputChannel.mMuteAudio = inputChannel.mFilter == Filter.MUTE || segmentChannel.mTimeScale  != null;
+
+                if (segmentChannel.mTimeScale  != null) {
+
+                    // For time scaling up we figure out how much time should be cut and setup an
+                    // accumulator the transcoder can use to dole out the cuts evenly over the segment
+                    // this will be used to determine how many frames should be cut
+                    if (trackDuration > segmentDuration) {
+                        inputChannel.mTimeToCut = trackDuration - segmentDuration;
+                        inputChannel.mTimeAlreadyCut = 0;
+                    }
+                    // For time scaling down we figure out how much time should be added and setup an
+                    // accumulator the transcoder can use to dole out the additions evenly over the segment
+                    // this will be used to determine how many duplicate frames should be inserted
+                    if (trackDuration < segmentDuration) {
+                        inputChannel.mTimeToAdd = segmentDuration - trackDuration;
+                        inputChannel.mTimeAlreadyAdded = 0;
+                    }
+                    inputChannel.mAudioInputOffsetUs -= trackDuration;
+                    inputChannel.mAudioInputOffsetUs += segmentDuration;
+                }
 
                 TLog.d(TAG, "Segment Channel " + channelName + " PT: " + presentationTime +
                         " VStart: " + inputChannel.mVideoInputStartTimeUs +
                         " AStart: " + inputChannel.mAudioInputStartTimeUs +
-                        " End: " + inputChannel.mInputEndTimeUs +
+                        " Add: " + inputChannel.mTimeToAdd +
                         " VOff: " + inputChannel.mVideoInputOffsetUs +
                         " AOff: " + inputChannel.mAudioInputOffsetUs +
-                        " duration: " + duration +
+                        " duration: " + trackDuration +
                         " seek: " + seek + " ASeek: " +
+                        " Cut: " + inputChannel.mTimeToCut +
+                        " End: " + inputChannel.mInputEndTimeUs +
                         " VPT:" + videoPresentationTime +
                         " APT:" + audioPresentationTime +
                         " VET:" + videoEncodedTime +
@@ -421,7 +485,7 @@ public class TimeLine {
          * @return
          */
         public Segment timeScale(long timeScale) {
-            mLastSegmentChannel.mTimeScale = timeScale;
+            mLastSegmentChannel.mTimeScale = timeScale * 1000l;
             return this;
         }
 

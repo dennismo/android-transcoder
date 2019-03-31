@@ -51,6 +51,7 @@ class AudioChannel {
     private final LinkedHashMap<String, Queue<AudioBuffer>> mEmptyBuffers;
     private final LinkedHashMap<String, Queue<AudioBuffer>> mFilledBuffers;
     private final LinkedHashMap<String, Boolean> mAtEndOfSegment;
+    private final LinkedHashMap<String, Boolean> mMute;
     private final LinkedHashMap<String, MediaCodec> mDecoders;
     private final MediaCodec mEncoder;
     private final MediaFormat mEncodeFormat;
@@ -81,6 +82,7 @@ class AudioChannel {
         mEmptyBuffers = new LinkedHashMap<String, Queue<AudioBuffer>>();
         mFilledBuffers = new LinkedHashMap<String, Queue<AudioBuffer>>();
         mAtEndOfSegment = new LinkedHashMap<String, Boolean>();
+        mMute = new LinkedHashMap<String, Boolean>();
 
         for (Map.Entry<String, MediaCodec> entry : mDecoders.entrySet()) {
             MediaCodec decoder = entry.getValue();
@@ -90,6 +92,7 @@ class AudioChannel {
             mEmptyBuffers.put(entry.getKey(), empty);
             mFilledBuffers.put(entry.getKey(), filled);
             mAtEndOfSegment.put(entry.getKey(), false);
+            mMute.put(entry.getKey(), false);
         }
         mEncoderBuffers = new MediaCodecBufferCompatWrapper(mEncoder);
     }
@@ -113,7 +116,7 @@ class AudioChannel {
             AudioBuffer decoderBuffer;
             while ((decoderBuffer = filledBuffers.poll()) != null) {
                 if (decoderBuffer.bufferIndex != BUFFER_INDEX_END_OF_STREAM) {
-                    TLog.v(TAG, "Released Decoder Buffer " + decoderBuffer.bufferIndex);
+                    //TLog.v(TAG, "Released Decoder Buffer " + decoderBuffer.bufferIndex);
                     try {
                         mDecoders.get(entry.getKey()).releaseOutputBuffer(decoderBuffer.bufferIndex, false);
                     } catch (Exception e) {
@@ -134,6 +137,9 @@ class AudioChannel {
     }
     public void setEndOfSegment(String channelName) {
         mAtEndOfSegment.put(channelName, true);
+    }
+    public void setMute(String channelName) {
+        mMute.put(channelName, true);
     }
     public void setActualDecodedFormat(final MediaFormat decodedFormat) {
         mActualDecodedFormat = decodedFormat;
@@ -194,12 +200,12 @@ class AudioChannel {
      * @param bufferIndex - decoder buffer index
      * @param presentationTimeUs - presentation time for output purposes
      * @param presentationTimeOffsetUs - presentation time offset relative to output
-     * @param mute - if true mute track
+
      * @param skipFirstUs - amount to skip at start of buffer
      * @param skipLastUs - amount to skip at end of buffer
      */
     public void drainDecoderBufferAndQueue(String input, final int bufferIndex,
-        final Long presentationTimeUs, Long presentationTimeOffsetUs, boolean mute, long skipFirstUs, long skipLastUs) {
+        final Long presentationTimeUs, Long presentationTimeOffsetUs, long skipFirstUs, long skipLastUs) {
 
         // Grab the buffer from the decoder
         MediaCodecBufferCompatWrapper decoderBuffer = mDecoderBuffers.get(input);
@@ -227,7 +233,6 @@ class AudioChannel {
         buffer.bufferIndex = bufferIndex; // Original decoder buffer index
         buffer.presentationTimeUs = presentationTimeUs;
         buffer.presentationTimeOffsetUs = presentationTimeOffsetUs;
-        buffer.mute = mute;
         buffer.data = data == null ? null : data;
 
         // Make sure we have an overflow buffer ready
@@ -259,7 +264,7 @@ class AudioChannel {
         // All channels must have filled buffers before we mix down
         for (Map.Entry<String, Queue<AudioBuffer>> entry : mFilledBuffers.entrySet()) {
             if (entry.getValue().isEmpty()) {
-                if (!mAtEndOfSegment.get(entry.getKey()))
+                if (!mAtEndOfSegment.get(entry.getKey()) && !mMute.get(entry.getKey()))
                     areAllFilled = false;
             } else {
                 someFilled = true;
@@ -277,7 +282,7 @@ class AudioChannel {
                 return null;
             }
             mEncoderBuffer = mEncoderBuffers.getInputBuffer(mEncoderBufferIndex).asShortBuffer();
-            TLog.v(TAG, "Got encoder buffer");
+            //TLog.v(TAG, "Got encoder buffer");
         }
 
         // Drain overflow first, just hand it over and we will process the rest next time
@@ -429,7 +434,7 @@ class AudioChannel {
             // Limit inBuff to outBuff's capacity
             inBuff.limit(Math.max(inBuff.limit(),outBuff.capacity()));
 
-            outputBufferStartingPosition = mRemixer.remix(inBuff, outBuff, append, position, input.mute);
+            outputBufferStartingPosition = mRemixer.remix(inBuff, outBuff, append, position);
 
             // Reset limit to its own capacity & Keep position
             inBuff.limit(inBuff.capacity());
@@ -438,7 +443,7 @@ class AudioChannel {
             // Remix the rest onto overflowBuffer
             // NOTE: We should only reach this point when overflow buffer is empty
             final long consumedDurationUs = sampleCountToInputDurationUs(inBuff.position());
-            overflowBufferStartingPosition = mRemixer.remix(inBuff, overflowBuff, append, overflowPosition, input.mute);
+            overflowBufferStartingPosition = mRemixer.remix(inBuff, overflowBuff, append, overflowPosition);
 
             // Seal off overflowBuff & mark limit
             //overflowBuff.flip();
@@ -446,7 +451,7 @@ class AudioChannel {
             input.presentationTimeOffsetUs;
         } else {
             // No overflow
-            outputBufferStartingPosition = mRemixer.remix(inBuff, outBuff, append, position, input.mute);
+            outputBufferStartingPosition = mRemixer.remix(inBuff, outBuff, append, position);
             inBuff.limit(inBuff.capacity());
             //outBuff.flip();
         }
