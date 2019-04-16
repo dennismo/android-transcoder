@@ -238,6 +238,8 @@ public class TimeLine {
         public long mTimeAlreadyCut = 0l;
         public long mTimeToAdd = 0l;
         public long mTimeAlreadyAdded = 0l;
+        public boolean mFrameWasCut = false;
+        public long mLastBufferPresentationTime = 0;
         public boolean mMuteAudio = false;
         InputChannel() {
         }
@@ -342,6 +344,7 @@ public class TimeLine {
                     inputChannel.mAudioInputOffsetUs -= trackDuration;
                     inputChannel.mAudioInputOffsetUs += segmentDuration;
                 }
+                inputChannel.mFrameWasCut = false;
 
                 TLog.d(TAG, "Segment Channel " + channelName + " PT: " + presentationTime +
                         " VStart: " + inputChannel.mVideoInputStartTimeUs +

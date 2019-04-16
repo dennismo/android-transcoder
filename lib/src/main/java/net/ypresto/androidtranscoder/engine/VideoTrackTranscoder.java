@@ -597,14 +597,25 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                             return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
                     }
                     consumed = true;
+                    mFrameLength = decoderWrapper.mBufferInfo.presentationTimeUs - inputChannel.mLastBufferPresentationTime;
+                    if (mFrameLength == 0)
+                        mFrameLength = inputChannel.mVideoFrameLength;
+                    if (inputChannel.mFrameWasCut) {
+                        inputChannel.mFrameWasCut = false;
+                        inputChannel.mVideoInputOffsetUs -= mFrameLength;
+                        inputChannel.mTimeAlreadyCut += mFrameLength;
+                    }
+
                     long bufferInputStartTime = decoderWrapper.mBufferInfo.presentationTimeUs;
-                    long bufferInputEndTime = bufferInputStartTime + inputChannel.mVideoFrameLength;
+                    long bufferInputEndTime = bufferInputStartTime + mFrameLength;
                     long bufferOutputTime = bufferInputStartTime + inputChannel.mVideoInputOffsetUs;
                     long bufferOutputEndTime = bufferInputEndTime + inputChannel.mVideoInputOffsetUs;
+                    inputChannel.mLastBufferPresentationTime = bufferInputStartTime;
                     mLastBufferPresentationTime = bufferOutputTime;
 
                     TLog.v(TAG, "Processing Video Buffer on channel " + channelName +
                             " bufferInputStartTime=" + bufferInputStartTime +
+                            " mFrameLength= " + mFrameLength +
                             " bufferOutputTime=" + bufferOutputTime +
                             " mVideoInputOffsetUs=" + inputChannel.mVideoInputOffsetUs +
                             " mOutputPresentationTimeDecodedUs=" + mOutputPresentationTimeDecodedUs);
@@ -631,8 +642,6 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                             mTextures = 1; // Write if there is a texture
 
                         } else if (doRender && bufferInputStartTime >= inputChannel.mVideoInputStartTimeUs) {
-
-                            mFrameLength = bufferOutputEndTime - bufferOutputTime;
 
                             // Determine whether time scaling down progress thus far dictates cutting a frame
                             boolean cutFrame = false;
@@ -663,11 +672,9 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                             // If we are cutting a frame make adjustments to the offset and cut amounts
                             if (cutFrame) {
                                 TLog.v(TAG, "Scaling down channel " + channelName + " skipping buffer");
+                                inputChannel.mFrameWasCut = true;
                                 inputChannel.mVideoInputAcutalEndTimeUs = bufferInputEndTime;
-                                inputChannel.mVideoInputOffsetUs -= mFrameLength;
-                                inputChannel.mTimeAlreadyCut += mFrameLength;
                                 decoderWrapper.mDecoder.releaseOutputBuffer(result, false);
-                                mOutputPresentationTimeDecodedUs = Math.max(bufferOutputEndTime, mOutputPresentationTimeDecodedUs);
 
                                 // Otherwise prepare texture for rending
                             } else {
@@ -676,7 +683,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                                 decoderWrapper.filterTick(mOutputPresentationTimeDecodedUs);
                                 ++mTexturesReady;
                                 consumed = true;
-                                mOutputPresentationTimeDecodedUs = Math.max(bufferOutputTime, mOutputPresentationTimeDecodedUs);
+                                mOutputPresentationTimeDecodedUs = bufferOutputTime;
                                 TLog.v(TAG, "Texture ready channel " + channelName + " mOutputPresentationTimeDecodedUs=" + mOutputPresentationTimeDecodedUs);
                                 inputChannel.mVideoInputAcutalEndTimeUs = bufferInputEndTime;
                             }
@@ -686,7 +693,7 @@ public class VideoTrackTranscoder implements TrackTranscoder {
                             TLog.v(TAG, "Skipping video on channel" + channelName);
                             decoderWrapper.mDecoder.releaseOutputBuffer(result, false);
                             inputChannel.mVideoInputAcutalEndTimeUs = bufferInputEndTime;
-                            mOutputPresentationTimeDecodedUs = Math.max(bufferOutputEndTime, mOutputPresentationTimeDecodedUs);
+                            mOutputPresentationTimeDecodedUs = bufferOutputEndTime;
 
                         }
                     }
