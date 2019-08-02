@@ -42,7 +42,7 @@ public class SingleFileTranscoderTest {
     static private String inputFileNamer180;
     static private String inputFileNamer270;
     private static String status = "not started";
-    static private int LogLevelForTests = 2;
+    static private int LogLevelForTests = 3;
 
     static MediaTranscoder.Listener  listener = new MediaTranscoder.Listener() {
         @Override
@@ -152,77 +152,6 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
-
-    @Test()
-    public void TimeScale() {
-        runTest(new Transcode() {
-            @Override
-            public void run() throws IOException, InterruptedException, ExecutionException {
-                TLog.d(TAG, "@Test " + "TimeScale");
-                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/TimeScale.mp4";
-                cleanup(outputFileName);
-                ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
-                ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
-                TimeLine timeline = new TimeLine(LogLevelForTests)
-                        .addChannel("A", in1.getFileDescriptor())
-                        .addChannel("B", in1.getFileDescriptor())
-                        .addChannel("C", in1.getFileDescriptor())
-                        .addAudioOnlyChannel("D", in2.getFileDescriptor())
-                        .createSegment()
-                            .output("A").timeScale(2000)
-                            .output("D")
-                            .duration(4000)
-                        .timeLine().createSegment()
-                            .output("A").timeScale(500)
-                            .output("B", TimeLine.Filter.OPACITY_UP_RAMP).timeScale(2000)
-                            .output("D")
-                            .duration(1000)
-                        .timeLine().createSegment()
-                            .output("B").timeScale(2000)
-                            .duration(500)
-                        .timeLine().createSegment()
-                            .seek("A", 1000)
-                            .output("A").timeScale(500)
-                            .duration(2000)
-                            .output("D")
-                        .timeLine();
-                (MediaTranscoder.getInstance().transcodeVideo(
-                        timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
-                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
-                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
-                        listener)
-                ).get();
-            }
-        });
-    }
-    @Test()
-    public void NoAudioSegments() {
-        runTest(new Transcode() {
-            @Override
-            public void run() throws IOException, InterruptedException, ExecutionException {
-                TLog.d(TAG, "@Test " + "NoAudioSegments");
-                String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/NoAudioSegments.mp4";
-                cleanup(outputFileName);
-                ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
-                ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
-                TimeLine timeline = new TimeLine(LogLevelForTests)
-                        .addChannel("A", in1.getFileDescriptor())
-                        .createSegment()
-                        .output("A").timeScale(4000)
-                        .duration(8000)
-                        .timeLine();
-                (MediaTranscoder.getInstance().transcodeVideo(
-                        timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
-                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
-                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
-                        listener)
-                ).get();
-            }
-        });
-    }
-
     @Test()
     public void OrientationR0() {
         runTest(new Transcode() {
@@ -275,7 +204,6 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-
     @Test()
     public void OrientationR90() {
         runTest(new Transcode() {
@@ -328,7 +256,6 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-
     @Test()
     public void OrientationR180() {
         runTest(new Transcode() {
@@ -341,7 +268,15 @@ public class SingleFileTranscoderTest {
                 ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
-
+                /*
+                Matrix A: 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+                Matrix B: 1.0 0.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 1.0
+                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                Matrix: 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+                */
                 TimeLine timeline = new TimeLine(LogLevelForTests)
                         .addChannel("A", inr0.getFileDescriptor())
                         .addChannel("B", inr90.getFileDescriptor())
@@ -382,7 +317,6 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-
     @Test()
     public void OrientationR270() {
         runTest(new Transcode() {
@@ -1288,22 +1222,22 @@ public class SingleFileTranscoderTest {
                         .addChannel("A1", in1.getFileDescriptor())
                         .addChannel("A2", in1.getFileDescriptor())
                         .createSegment()
-                            .output("A0")
-                            .duration(3250)
+                        .output("A0")
+                        .duration(3250)
                         .timeLine().createSegment()
-                            .output("A0", TimeLine.Filter.OPACITY_DOWN_RAMP)
-                            .output("A1", TimeLine.Filter.OPACITY_UP_RAMP)
-                            .duration(1750)
+                        .output("A0", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("A1", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1750)
                         .timeLine().createSegment()
-                            .output("A1")
-                            .duration(3250)
+                        .output("A1")
+                        .duration(3250)
                         .timeLine().createSegment()
-                            .output("A1", TimeLine.Filter.OPACITY_DOWN_RAMP)
-                            .output("A2", TimeLine.Filter.OPACITY_UP_RAMP)
-                            .duration(1750)
+                        .output("A1", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("A2", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1750)
                         .timeLine().createSegment()
-                            .output("A2")
-                            .duration(3250)
+                        .output("A2")
+                        .duration(3250)
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,

@@ -385,7 +385,8 @@ public class AudioTrackTranscoder implements TrackTranscoder {
                         mAudioChannel.drainDecoderBufferAndQueue(channelName, result, decoderWrapper.mBufferInfo.presentationTimeUs,
                                 inputChannel.mAudioInputOffsetUs, 0l, 0l);
                     }
-                }
+                } else
+                    decoderWrapper.mDecoder.releaseOutputBuffer(result, false);  // No data just ignore it
             }
         }
         if (allDecodersEndOfStream()) {
