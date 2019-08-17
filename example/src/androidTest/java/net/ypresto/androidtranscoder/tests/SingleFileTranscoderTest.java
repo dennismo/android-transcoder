@@ -41,6 +41,7 @@ public class SingleFileTranscoderTest {
     static private String inputFileNamer90;
     static private String inputFileNamer180;
     static private String inputFileNamer270;
+    static private String inputFileNamea9;
     private static String status = "not started";
     static private int LogLevelForTests = 3;
 
@@ -72,6 +73,7 @@ public class SingleFileTranscoderTest {
         inputFileNamer90 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input4.mp4";
         inputFileNamer180 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input5.mp4";
         inputFileNamer270 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input6.mp4";
+        inputFileNamea9 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/input7.mp4";
         inputFileName3 = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output_SingleFileMono.mp4";
         cleanup(inputFileName1);
         cleanup(inputFileName2);
@@ -121,6 +123,15 @@ public class SingleFileTranscoderTest {
             assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
         }
         try {
+            InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.android9);
+            OutputStream out = new FileOutputStream(inputFileNamea9);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
             InputStream in = InstrumentationRegistry.getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.frogs);
             OutputStream out = new FileOutputStream(inputFileName2);
             copyFile(in, out);
@@ -152,6 +163,25 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
+    @Test()
+    public void NonStandardProfile() throws InterruptedException, ExecutionException, FileNotFoundException {
+        TLog.d(TAG, "@Test " + "Non Standard Profile");
+        String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output7.mp4";
+        cleanup(outputFileName);
+        ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileNamea9), ParcelFileDescriptor.MODE_READ_ONLY);
+
+        TimeLine timeline = new TimeLine(LogLevelForTests)
+                .addChannel("A", in1.getFileDescriptor())
+                .createSegment()
+                .output("A")
+                .timeLine();
+        (MediaTranscoder.getInstance().transcodeVideo(
+                timeline, outputFileName,
+                MediaFormatStrategyPresets.createAndroid16x9Strategy1080P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, 1),
+                listener)
+        ).get();
+    }
+
     @Test()
     public void OrientationR0() {
         runTest(new Transcode() {
@@ -268,15 +298,15 @@ public class SingleFileTranscoderTest {
                 ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer270), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0), ParcelFileDescriptor.MODE_READ_ONLY);
                 ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer90), ParcelFileDescriptor.MODE_READ_ONLY);
-                /*
-                Matrix A: 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
-                Matrix B: 1.0 0.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 1.0
-                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
-                Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
-                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
-                Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
-                Matrix: 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
-                */
+
+                //Matrix A: 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+                //Matrix B: 1.0 0.0 0.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 1.0
+                //Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                //Matrix: 0.0 -1.0 0.0 0.0 -1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0
+                //Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                //Matrix: -1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0
+                //Matrix: 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+
                 TimeLine timeline = new TimeLine(LogLevelForTests)
                         .addChannel("A", inr0.getFileDescriptor())
                         .addChannel("B", inr90.getFileDescriptor())
