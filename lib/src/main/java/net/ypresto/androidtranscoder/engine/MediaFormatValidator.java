@@ -35,12 +35,6 @@ class MediaFormatValidator {
         // Refer: http://en.wikipedia.org/wiki/MPEG-4_Part_14#Data_streams
         if (!validateEncoderMimeType(mime))
             throw new InvalidOutputFormatException("Video codecs not supported, actual mime type: " + mime);
-
-        ByteBuffer spsBuffer = AvcCsdUtils.getSpsBuffer(format);
-        byte profileIdc = AvcSpsUtils.getProfileIdc(spsBuffer);
-        if (profileIdc != PROFILE_IDC_BASELINE) {
-            throw new InvalidOutputFormatException("Non-baseline AVC video profile is not supported by Android OS, actual profile_idc: " + profileIdc);
-        }
     }
 
     public static void validateAudioOutputFormat(MediaFormat format) {
