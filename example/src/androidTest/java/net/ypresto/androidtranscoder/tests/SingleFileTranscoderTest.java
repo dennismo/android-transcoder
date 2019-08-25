@@ -43,7 +43,7 @@ public class SingleFileTranscoderTest {
     static private String inputFileNamer270;
     static private String inputFileNamea9;
     private static String status = "not started";
-    static private int LogLevelForTests = 3;
+    static private int LogLevelForTests = 2;
 
     static MediaTranscoder.Listener  listener = new MediaTranscoder.Listener() {
         @Override
@@ -163,6 +163,7 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
+
     @Test()
     public void NonStandardProfile() throws InterruptedException, ExecutionException, FileNotFoundException {
         TLog.d(TAG, "@Test " + "Non Standard Profile");
@@ -175,6 +176,41 @@ public class SingleFileTranscoderTest {
                 .createSegment()
                 .output("A")
                 .timeLine();
+        (MediaTranscoder.getInstance().transcodeVideo(
+                timeline, outputFileName,
+                MediaFormatStrategyPresets.createAndroid16x9Strategy1080P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, 1),
+                listener)
+        ).get();
+    }
+
+    @Test()
+    public void DriftFromManyVideos() throws InterruptedException, ExecutionException, FileNotFoundException {
+        TLog.d(TAG, "@Test " + "Drift from many videos");
+        String outputFileName = InstrumentationRegistry.getTargetContext().getExternalFilesDir(null) + "/output7.mp4";
+        cleanup(outputFileName);
+        ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileNamea9), ParcelFileDescriptor.MODE_READ_ONLY);
+
+        TimeLine timeline = new TimeLine(LogLevelForTests)
+                .addChannel("A1", in1.getFileDescriptor())
+                .addChannel("A2", in1.getFileDescriptor())
+                .addChannel("A3", in1.getFileDescriptor())
+                .addChannel("A4", in1.getFileDescriptor())
+                .addChannel("A5", in1.getFileDescriptor())
+                .addChannel("A6", in1.getFileDescriptor())
+                .addChannel("A7", in1.getFileDescriptor())
+                .addChannel("A8", in1.getFileDescriptor())
+                .addChannel("A9", in1.getFileDescriptor())
+                .addChannel("A10", in1.getFileDescriptor())
+                .createSegment().output("A1").timeLine()
+                .createSegment().output("A2").timeLine()
+                .createSegment().output("A3").timeLine()
+                .createSegment().output("A4").timeLine()
+                .createSegment().output("A5").timeLine()
+                .createSegment().output("A6").timeLine()
+                .createSegment().output("A7").timeLine()
+                .createSegment().output("A8").timeLine()
+                .createSegment().output("A9").timeLine()
+                .createSegment().output("A10").duration(1000).timeLine();
         (MediaTranscoder.getInstance().transcodeVideo(
                 timeline, outputFileName,
                 MediaFormatStrategyPresets.createAndroid16x9Strategy1080P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, 1),
@@ -1204,7 +1240,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-
+/*
     @Test()
     public void HopScotch2() {
         runTest(new Transcode() {
@@ -1316,7 +1352,7 @@ public void ThreeFiles() {
     });
 
 }
-
+*/
 
     public interface Transcode {
         void run () throws IOException, InterruptedException, ExecutionException;

@@ -341,7 +341,7 @@ public class AudioTrackTranscoder implements TrackTranscoder {
                     TLog.d(TAG, "End of audio stream on channel " + channelName);
 
                 // Detect end of segment
-                } else if (inputChannel.mInputEndTimeUs != null && bufferInputStartTime >= inputChannel.mInputEndTimeUs) {
+                } else if (inputChannel.mInputEndTimeUs != null && bufferInputEndTime >= inputChannel.mInputEndTimeUs) {
 
                         decoderWrapper.mIsSegmentEOS = true;
                         TLog.d(TAG, "End of audio segment on channel " + channelName + " " + bufferInputStartTime + " >= " + inputChannel.mInputEndTimeUs);

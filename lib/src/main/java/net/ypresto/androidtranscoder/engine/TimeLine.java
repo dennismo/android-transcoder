@@ -280,6 +280,13 @@ public class TimeLine {
                 String channelName = segmentChannelEntry.getKey();
                 InputChannel inputChannel = segmentChannel.mChannel;
 
+                // If we are at the start of a stream align the presentation times
+                if (inputChannel.mInputEndTimeUs == 0l) {
+                    Long maxPresentation = Math.max(videoPresentationTime, audioPresentationTime);
+                    videoPresentationTime = maxPresentation;
+                    audioPresentationTime = maxPresentation;
+                }
+
                 // Round seeks up to a frame
                 Long actualSeek = mSeeks.get(channelName) != null ?  mSeeks.get(channelName) : 0l;
                 Long seek = (actualSeek / inputChannel.mVideoFrameLength) * inputChannel.mVideoFrameLength;
