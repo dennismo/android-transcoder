@@ -246,7 +246,8 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             textPaint.setTextSize(fontSize);
             textPaint.setAntiAlias(true);
             textPaint.setARGB(0xff, 0xff, 0xff, 0xff);
-            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            // Removed when upgrading to 28 canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.save();
             canvas.rotate(rotation, pivotX, pivotY);
             canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             canvas.drawText(str, 10 + offsetX,10 + fontSize, textPaint);
