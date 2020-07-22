@@ -233,7 +233,7 @@ public class MediaTranscoder {
                 }
             });
 
-            if (exception != null) throw exception;
+            //if (exception != null) throw exception;
             return null;
             }
         });

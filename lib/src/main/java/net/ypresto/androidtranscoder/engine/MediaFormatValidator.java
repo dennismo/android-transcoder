@@ -19,12 +19,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 
-import net.ypresto.androidtranscoder.utils.AvcCsdUtils;
-import net.ypresto.androidtranscoder.utils.AvcSpsUtils;
-
-import java.nio.ByteBuffer;
-
-class MediaFormatValidator {
+public class MediaFormatValidator {
     // Refer: http://en.wikipedia.org/wiki/H.264/MPEG-4_AVC#Profiles
     private static final byte PROFILE_IDC_BASELINE = 66;
 
@@ -55,6 +50,24 @@ class MediaFormatValidator {
                     if (types[j].equalsIgnoreCase(mime)) {
                         return true;
                     }
+                }
+            }
+        }
+        return false;
+    }
+    public static boolean validateResolution(int width, int height) {
+        // See https://developer.android.com/reference/android/media/MediaCodecInfo
+        // Code on that page was updated to use getCodecInfos rather than deprecated getCodeInfoAt()
+        MediaCodecList list = new MediaCodecList(MediaCodecList.ALL_CODECS);
+        MediaCodecInfo[] codecInfos = list.getCodecInfos();
+        for (MediaCodecInfo info : codecInfos) {
+            if (info.isEncoder()) {
+                String[] types = info.getSupportedTypes();
+                for (int j = 0; j < types.length; j++) {
+                    MediaCodecInfo.CodecCapabilities cap = info.getCapabilitiesForType(types[j]);
+                    MediaCodecInfo.VideoCapabilities vcap = cap != null ? cap.getVideoCapabilities() : null;
+                    if (vcap != null && vcap.isSizeSupported(width, height))
+                        return true;
                 }
             }
         }

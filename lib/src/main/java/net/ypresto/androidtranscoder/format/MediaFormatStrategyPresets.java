@@ -74,6 +74,24 @@ public class MediaFormatStrategyPresets {
     }
 
     /**
+     *
+     * @param audioBitrate  Preferred bitrate for audio encoding.
+     * @param audioChannels Output audio channels.
+     */
+    public static MediaFormatStrategy createAndroidStrategy720P(int audioBitrate, int audioChannels) {
+        return new AndroidFormatStrategy(720, 8000000, audioBitrate, audioChannels);
+    }
+
+    /**
+     *
+     * @param audioBitrate  Preferred bitrate for audio encoding.
+     * @param audioChannels Output audio channels.
+     */
+    public static MediaFormatStrategy createAndroidStrategy1080P(int audioBitrate, int audioChannels) {
+        return new AndroidFormatStrategy(1080, 10000000, audioBitrate, audioChannels);
+    }
+
+    /**
      * Preset similar to iOS SDK's AVAssetExportPreset960x540.
      * Note that encoding resolutions of this preset are not supported in all devices e.g. Nexus 4.
      * On unsupported device encoded video stream will be broken without any exception.

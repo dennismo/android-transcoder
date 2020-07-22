@@ -1,4 +1,4 @@
-// Test change to see if commit propagates
+// UltraWideAndSquare will fail unless device supports ultrawide encoders (like galaxy s10) 
 package net.ypresto.androidtranscoder.tests;
 
 import android.content.res.Resources;
@@ -42,8 +42,12 @@ public class SingleFileTranscoderTest {
     static private String inputFileNamer180;
     static private String inputFileNamer270;
     static private String inputFileNamea9;
+    static private String inputFileNamer0square;
+    static private String inputFileNamer270square;
+    static private String inputFileNamer0ultrawide;
+    static private String inputFileNamer90ultrawide;
     private static String status = "not started";
-    static private int LogLevelForTests = 2;
+    static private int LogLevelForTests = 4;  // 2=verbose 3=debug 4=info 5=warning
 
     static MediaTranscoder.Listener  listener = new MediaTranscoder.Listener() {
         @Override
@@ -61,7 +65,7 @@ public class SingleFileTranscoderTest {
         }
         @Override
         public void onTranscodeFailed(Exception e) {
-            assertEquals("onTranscodeFailed", "none", e + Log.getStackTraceString(e));
+            status =  e + Log.getStackTraceString(e);
         }
     };
 
@@ -74,6 +78,10 @@ public class SingleFileTranscoderTest {
         inputFileNamer180 = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input5.mp4";
         inputFileNamer270 = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input6.mp4";
         inputFileNamea9 = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input7.mp4";
+        inputFileNamer0square = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input8.mp4";
+        inputFileNamer270square = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input9.mp4";
+        inputFileNamer0ultrawide = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input10.mp4";
+        inputFileNamer90ultrawide = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/input11.mp4";
         inputFileName3 = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/output_SingleFileMono.mp4";
         cleanup(inputFileName1);
         cleanup(inputFileName2);
@@ -123,6 +131,42 @@ public class SingleFileTranscoderTest {
             assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
         }
         try {
+            InputStream in = InstrumentationRegistry.getInstrumentation().getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r0square);
+            OutputStream out = new FileOutputStream(inputFileNamer0square);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getInstrumentation().getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r0270square);
+            OutputStream out = new FileOutputStream(inputFileNamer270square);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getInstrumentation().getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r0ultrawide);
+            OutputStream out = new FileOutputStream(inputFileNamer0ultrawide);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
+            InputStream in = InstrumentationRegistry.getInstrumentation().getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.r90ultrawide);
+            OutputStream out = new FileOutputStream(inputFileNamer90ultrawide);
+            copyFile(in, out);
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            assertEquals("Exception on file copy", "none", e + Log.getStackTraceString(e));
+        }
+        try {
             InputStream in = InstrumentationRegistry.getInstrumentation().getContext().getResources().openRawResource(net.ypresto.androidtranscoder.example.test.R.raw.android9);
             OutputStream out = new FileOutputStream(inputFileNamea9);
             copyFile(in, out);
@@ -159,7 +203,7 @@ public class SingleFileTranscoderTest {
                 .timeLine();
         (MediaTranscoder.getInstance().transcodeVideo(
                 timeline, outputFileName,
-                MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, 1),
+                MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, 1),
                 listener)
         ).get();
     }
@@ -262,7 +306,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -314,7 +358,60 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
+                                Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
+                                Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        listener)
+                ).get();
+            }
+        });
+    }
+    // UltraWideAndSquare will fail unless device supports ultrawide encoders (like galaxy s10)
+    @Test()
+    public void UltraWideAndSquare() {
+        runTest(new Transcode() {
+            @Override
+            public void run() throws IOException, InterruptedException, ExecutionException {
+                TLog.d(TAG, "@Test " + "UltraWideAndSquare");
+                String outputFileName = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/UltraWideAndSquare.mp4";
+                cleanup(outputFileName);
+                ParcelFileDescriptor inr0 = ParcelFileDescriptor.open(new File(inputFileNamer0ultrawide), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr90 = ParcelFileDescriptor.open(new File(inputFileNamer90ultrawide), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr180 = ParcelFileDescriptor.open(new File(inputFileNamer0square), ParcelFileDescriptor.MODE_READ_ONLY);
+                ParcelFileDescriptor inr270 = ParcelFileDescriptor.open(new File(inputFileNamer270square), ParcelFileDescriptor.MODE_READ_ONLY);
+                TimeLine timeline = new TimeLine(LogLevelForTests)
+                        .addChannel("A", inr90.getFileDescriptor())
+                        .addChannel("B", inr180.getFileDescriptor())
+                        .addChannel("C", inr270.getFileDescriptor())
+                        .addChannel("D", inr0.getFileDescriptor())
+                        .createSegment()
+                        .output("A")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("A", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("B", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("B", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("C", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C")
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("C", TimeLine.Filter.OPACITY_DOWN_RAMP)
+                        .output("D", TimeLine.Filter.OPACITY_UP_RAMP)
+                        .duration(1000)
+                        .timeLine().createSegment()
+                        .output("D")
+                        .duration(1000)
+                        .timeLine();
+                (MediaTranscoder.getInstance().transcodeVideo(
+                        timeline, outputFileName,
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -375,7 +472,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -427,7 +524,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -452,7 +549,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -678,7 +775,7 @@ public class SingleFileTranscoderTest {
 
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -888,7 +985,7 @@ public class SingleFileTranscoderTest {
 
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -974,7 +1071,7 @@ public class SingleFileTranscoderTest {
 
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -1013,7 +1110,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -1056,7 +1153,7 @@ public class SingleFileTranscoderTest {
                     .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -1101,7 +1198,7 @@ public class SingleFileTranscoderTest {
                 .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -1146,7 +1243,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 1),
                         listener)
@@ -1191,7 +1288,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(
                                 Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
                                 Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
@@ -1234,7 +1331,7 @@ public class SingleFileTranscoderTest {
                 .timeLine();
             (MediaTranscoder.getInstance().transcodeVideo(
                     timeline, outputFileName,
-                    MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                    MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                     listener)
             ).get();
             }
@@ -1267,7 +1364,7 @@ public class SingleFileTranscoderTest {
                             .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -1307,7 +1404,7 @@ public class SingleFileTranscoderTest {
                         .timeLine();
                 (MediaTranscoder.getInstance().transcodeVideo(
                         timeline, outputFileName,
-                        MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                        MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                         listener)
                 ).get();
             }
@@ -1345,7 +1442,7 @@ public void ThreeFiles() {
                         .timeLine();
               (MediaTranscoder.getInstance().transcodeVideo(
                     timeline, outputFileName,
-                    MediaFormatStrategyPresets.createAndroid16x9Strategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
+                    MediaFormatStrategyPresets.createAndroidStrategy720P(Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS, Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
                     listener)
             ).get();
         }
@@ -1355,18 +1452,14 @@ public void ThreeFiles() {
 */
 
     public interface Transcode {
-        void run () throws IOException, InterruptedException, ExecutionException;
+        void run () throws Exception;
     }
     private void runTest(Transcode callback) {
         try {
             callback.run();
-        } catch(IOException e) {
+            assertEquals("Completed Test", status, "complete");
+        } catch(Exception e) {
             assertEquals("Exception on Transcode", "none", e + Log.getStackTraceString(e));
-        } catch(InterruptedException e) {
-            assertEquals("Exception on Transcode", "none", e + Log.getStackTraceString(e));
-        } catch(ExecutionException e) {
-            assertEquals("Exception on Transcode", "none", e + Log.getStackTraceString(e));
-
         }
     }
 
