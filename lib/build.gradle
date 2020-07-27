@@ -30,11 +30,14 @@ android {
 }
 
 publish {
+    userOrg = 'magixIT'
+    publishVersion = '0.3.66'
     groupId = 'net.ypresto.androidtranscoder'
     artifactId = 'android-transcoder'
     version = '0.1.10-SNAPSHOT'
     licences = ['Apache-2.0']
-    website = 'https://github.com/ypresto/android-transcoder'
+    website = 'https://github.com/selsamman/android-transcoder'
     autoPublish = false
     dryRun = false
+    desc = 'android transcoder'
 }
