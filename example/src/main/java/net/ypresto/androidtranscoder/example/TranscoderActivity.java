@@ -14,6 +14,9 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.annotation.MainThread;
+import androidx.core.content.FileProvider;
+
 import net.ypresto.androidtranscoder.MediaTranscoder;
 import net.ypresto.androidtranscoder.format.MediaFormatStrategyPresets;
 
@@ -89,7 +92,9 @@ public class TranscoderActivity extends Activity {
                         public void onTranscodeCompleted() {
                             Log.d(TAG, "transcoding took " + (SystemClock.uptimeMillis() - startTime) + "ms");
                             onTranscodeFinished(true, "transcoded file placed on " + file, parcelFileDescriptor);
-                            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(file), "video/mp4"));
+                            Intent intent = new Intent(Intent.ACTION_VIEW).setDataAndType( FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + ".provider",file), "video/mp4");
+                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            startActivity(intent);
                         }
 
                         @Override

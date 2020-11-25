@@ -207,7 +207,7 @@ public class SingleFileTranscoderTest {
                 listener)
         ).get();
     }
-/*
+
     @Test()
     public void NonStandardProfile() throws InterruptedException, ExecutionException, FileNotFoundException {
         TLog.d(TAG, "@Test " + "Non Standard Profile");
@@ -781,51 +781,7 @@ public class SingleFileTranscoderTest {
             }
         });
     }
-*/
-@Test()
-public void TimeScale() {
-    runTest(new Transcode() {
-        @Override
-        public void run() throws IOException, InterruptedException, ExecutionException {
-            TLog.d(TAG, "@Test " + "TimeScale");
-            String outputFileName = InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null) + "/TimeScale.mp4";
-            cleanup(outputFileName);
-            ParcelFileDescriptor in1 = ParcelFileDescriptor.open(new File(inputFileName1), ParcelFileDescriptor.MODE_READ_ONLY);
-            ParcelFileDescriptor in2 = ParcelFileDescriptor.open(new File(inputFileName2), ParcelFileDescriptor.MODE_READ_ONLY);
-            TimeLine timeline = new TimeLine(LogLevelForTests)
-                    .addChannel("A", in1.getFileDescriptor())
-                    .addChannel("B", in1.getFileDescriptor())
-                    .addChannel("C", in1.getFileDescriptor())
-                    .addAudioOnlyChannel("D", in2.getFileDescriptor())
-                    .createSegment()
-                    .output("A").timeScale(2000)
-                    .output("D")
-                    .duration(4000)
-                    .timeLine().createSegment()
-                    .output("A").timeScale(500)
-                    .output("B", TimeLine.Filter.OPACITY_UP_RAMP).timeScale(2000)
-                    .output("D")
-                    .duration(1000)
-                    .timeLine().createSegment()
-                    .output("B").timeScale(2000)
-                    .duration(500)
-                    .timeLine().createSegment()
-                    .seek("A", 1000)
-                    .output("A").timeScale(500)
-                    .duration(2000)
-                    .output("D")
-                    .timeLine();
-            (MediaTranscoder.getInstance().transcodeVideo(
-                    timeline, outputFileName,
-                    MediaFormatStrategyPresets.createAndroid16x9Strategy720P(
-                            Android16By9FormatStrategy.AUDIO_BITRATE_AS_IS,
-                            Android16By9FormatStrategy.AUDIO_CHANNELS_AS_IS),
-                    listener)
-            ).get();
-        }
-    });
-}
-/*
+
     @Test()
     public void SingleFileFastMute() {
         runTest(new Transcode() {
@@ -1381,7 +1337,7 @@ public void TimeScale() {
             }
         });
     }
-
+/*
     @Test()
     public void HopScotch2() {
         runTest(new Transcode() {

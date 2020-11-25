@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
     buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "net.ypresto.androidtranscoder.example"
-        minSdkVersion 21
-        targetSdkVersion 26
+        minSdkVersion 24
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -26,6 +26,7 @@ android {
 
 dependencies {
     implementation project(':lib')
+    implementation 'androidx.core:core:1.1.0'
     androidTestImplementation 'androidx.annotation:annotation:1.0.0'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     // Set this dependency to use JUnit 4 rules
