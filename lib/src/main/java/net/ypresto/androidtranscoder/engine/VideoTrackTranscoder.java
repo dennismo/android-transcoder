@@ -112,11 +112,11 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mPresentationTimeus = presentationTimeUs;
             mDurationUs = durationUs;
 
-            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
-                RectF originalSurface = mOutputSurface.getSourceRect();
-                originalSurface.set(originalSurface.left,originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
-                mOutputSurface.setDestRect(originalSurface);
-            }
+//            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
+//                RectF originalSurface = mOutputSurface.getSourceRect();
+//                originalSurface.set(originalSurface.left,originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
+//                mOutputSurface.setDestRect(originalSurface);
+//            }
 
         }
         private void filterTick (float presentationTimeUs) {
@@ -272,17 +272,11 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mFilter = filter;
             mPresentationTimeus = presentationTimeUs;
             mDurationUs = durationUs;
-            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
-                RectF originalSurface = mOutputSurface.getSourceRect();
-                originalSurface.set(originalSurface.left, originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
-                mOutputSurface.setDestRect(originalSurface);
-                if(mFilter == TimeLine.Filter.LEFT){
-
-                }
-                else{
-
-                }
-            }
+//            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
+//                RectF originalSurface = mOutputSurface.getSourceRect();
+//                originalSurface.set(originalSurface.left, originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
+//                mOutputSurface.setDestRect(originalSurface);
+//            }
 
         }
         private void filterTick (float presentationTimeUs) {
