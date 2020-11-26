@@ -18,6 +18,7 @@
 // modified: removed unused method bodies
 // modified: use GL_LINEAR for GL_TEXTURE_MIN_FILTER to improve quality.
 package net.ypresto.androidtranscoder.engine;
+import android.graphics.PointF;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
@@ -29,6 +30,9 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
+import net.ypresto.androidtranscoder.format.Transform;
+import net.ypresto.androidtranscoder.utils.GLFilterUtil;
 
 import static android.opengl.GLES20.GL_COLOR_BUFFER_BIT;
 
@@ -156,6 +160,9 @@ class TextureRender {
                     Matrix.scaleM(mMVPMatrix, 0, 1.0F, heightScale, 1.0f);
                 }
             }
+
+            mMVPMatrix = GLFilterUtil.createFilterMvpMatrix(mMVPMatrix, outputSurface.getTransform());
+
             outputSurface.getSurfaceTexture().getTransformMatrix(mSTMatrix);
 
             GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);

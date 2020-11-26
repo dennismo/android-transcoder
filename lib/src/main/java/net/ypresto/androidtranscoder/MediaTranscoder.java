@@ -168,9 +168,15 @@ public class MediaTranscoder {
     public Future<Void> transcodeVideo(final FileDescriptor inFileDescriptor, final String outPath, final MediaFormatStrategy outFormatStrategy, final Listener listener) {
         TimeLine timeLine = (new TimeLine())
             .addChannel("default", inFileDescriptor)
-            .createSegment()
-                .output("default")
-            .timeLine();
+                .createSegment()
+//                .output("default", TimeLine.Filter.LEFT)
+                .output("default", TimeLine.Filter.RIGHT)
+                .duration(3000)
+            .timeLine()
+                .createSegment()
+                .output("default", TimeLine.Filter.LEFT)
+                .duration(3000)
+                .timeLine();
         return transcodeVideo(timeLine, outPath, outFormatStrategy, listener);
     }
     /**

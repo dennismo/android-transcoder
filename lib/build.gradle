@@ -29,6 +29,10 @@ android {
     }
 }
 
+dependencies {
+    implementation 'androidx.annotation:annotation:1.1.0'
+}
+
 publish {
     userOrg = 'magixIT'
     publishVersion = '0.3.66'

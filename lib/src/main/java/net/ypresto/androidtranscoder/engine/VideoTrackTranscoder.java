@@ -18,6 +18,7 @@ package net.ypresto.androidtranscoder.engine;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.media.MediaCodec;
@@ -28,6 +29,7 @@ import android.view.Surface;
 import net.ypresto.androidtranscoder.TLog;
 
 import net.ypresto.androidtranscoder.format.MediaFormatExtraConstants;
+import net.ypresto.androidtranscoder.format.Transform;
 import net.ypresto.androidtranscoder.utils.MediaExtractorUtils;
 
 import java.io.IOException;
@@ -109,6 +111,12 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mFilter = filter;
             mPresentationTimeus = presentationTimeUs;
             mDurationUs = durationUs;
+
+            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
+                RectF originalSurface = mOutputSurface.getSourceRect();
+                originalSurface.set(originalSurface.left,originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
+                mOutputSurface.setDestRect(originalSurface);
+            }
 
         }
         private void filterTick (float presentationTimeUs) {
@@ -264,6 +272,17 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             mFilter = filter;
             mPresentationTimeus = presentationTimeUs;
             mDurationUs = durationUs;
+            if(mFilter == TimeLine.Filter.LEFT || mFilter == TimeLine.Filter.RIGHT){
+                RectF originalSurface = mOutputSurface.getSourceRect();
+                originalSurface.set(originalSurface.left, originalSurface.top, originalSurface.right * 2, originalSurface.bottom);
+                mOutputSurface.setDestRect(originalSurface);
+                if(mFilter == TimeLine.Filter.LEFT){
+
+                }
+                else{
+
+                }
+            }
 
         }
         private void filterTick (float presentationTimeUs) {
@@ -396,6 +415,12 @@ public class VideoTrackTranscoder implements TrackTranscoder {
             TimeLine.InputChannel inputChannel = inputChannelEntry.getValue();
             DecoderWrapper decoderWrapper = mDecoderWrappers.get(channelName);
             decoderWrapper.mOutputSurface.setAlpha(1.0f);
+            if (inputChannel.mFilter == TimeLine.Filter.LEFT){
+                decoderWrapper.mOutputSurface.setTransform(new Transform(new PointF(0.5f, 0.5f), new PointF(0.25f, 0.5f), 0));
+            }
+            if (inputChannel.mFilter == TimeLine.Filter.RIGHT){
+                decoderWrapper.mOutputSurface.setTransform(new Transform(new PointF(0.5f, 0.5f), new PointF(0.75f, 0.5f), 0));
+            }
             if (!decoderWrapper.mIsDecoderEOS) {
                 outputSurfaces.add(decoderWrapper.mOutputSurface);
                 decoderWrapper.setFilter(inputChannel.mFilter, mOutputPresentationTimeDecodedUs, segment.getDuration());
@@ -408,6 +433,8 @@ public class VideoTrackTranscoder implements TrackTranscoder {
         else
             mTextureRender = new TextureRender(outputSurfaces, null);
         mTextureRender.surfaceCreated();
+
+
         TLog.d(TAG, "Surface Texture Created for " + outputSurfaces.size() + " surfaces");
         mTextures = outputSurfaces.size();
         mIsSegmentFinished = false;
